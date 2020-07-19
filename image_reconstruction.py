@@ -17,7 +17,7 @@ Todo:
 3. Dataloader that does this somehow (Done)
 4. Some model-> ResNet50  + new full-connected layer (feature vector-> probability that image belongs to one of n classes) (Done-ish)
 5. Additional training with the above model minimizing the loss wrt. actual rotated angle
-f(I_A)=min[L(A_predict,A)]
+f(I_A) = min[L(A_predict,A)]
 6. Save this new model
 
 7. Proof of concept:
@@ -54,11 +54,11 @@ from tensorflow.keras.applications import MobileNet, ResNet50
 from tensorflow.keras.applications.resnet50 import preprocess_input
 
 # Imports for Colab 6
-import cv2 # Read raw image
+import cv2  # Read raw image
 import glob
 # from google.colab.patches import cv2_imshow
 from matplotlib import pyplot as plt
-from scipy import ndimage # For rotation task or
+from scipy import ndimage  # For rotation task or
 import imutils
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Flatten, Dropout
@@ -90,31 +90,32 @@ from keras.models import Model
 # Check to see if GPU is being used
 tensorflow.test.gpu_device_name()
 
-dims=(400,400,3)
-bool_generate=False
-BATCH_SIZE=64
+dims = (400, 400, 3)
+bool_generate = False
+BATCH_SIZE = 64
 
-train_tfrecords_dir="../Datasets/MODIS_MCD43A4/tfrecords/train/train.tfrecords-*"
-valid_tfrecords_dir="../Datasets/MODIS_MCD43A4/tfrecords/valid/valid.tfrecords-*"
-test_tfrecords_dir="../Datasets/MODIS_MCD43A4/tfrecords/test/test.tfrecords-*"
+root_dir = "/home/satyarth934/Projects/NASA_FDL_2020/Datasets/MODIS_MCD43A4/"
+train_tfrecords_dir = root_dir + "tfrecords/train/train.tfrecords-*"
+valid_tfrecords_dir = root_dir + "tfrecords/valid/valid.tfrecords-*"
+test_tfrecords_dir = root_dir + "tfrecords/test/test.tfrecords-*"
 
-train_tfrecords=glob.glob(train_tfrecords_dir)
-valid_tfrecords=glob.glob(valid_tfrecords_dir)
-test_tfrecords=glob.glob(test_tfrecords_dir)
+train_tfrecords = glob.glob(train_tfrecords_dir)
+valid_tfrecords = glob.glob(valid_tfrecords_dir)
+test_tfrecords = glob.glob(test_tfrecords_dir)
 
 """# Dataloader creation and test"""
 
-train_dataset=from_tfrecords(records_globs=train_tfrecords,
-                                split="train",
-                                batch_size=BATCH_SIZE)
+train_dataset = from_tfrecords(records_globs=train_tfrecords,
+                               split="train",
+                               batch_size=BATCH_SIZE)
 
-valid_dataset=from_tfrecords(records_globs=valid_tfrecords,
-                                split="valid",
-                                batch_size=BATCH_SIZE)
+valid_dataset = from_tfrecords(records_globs=valid_tfrecords,
+                               split="valid",
+                               batch_size=BATCH_SIZE)
 
 
-print("LEN TRAINING:",len(train_tfrecords))
-print("LEN VALID:",len(valid_tfrecords))
+print("LEN TRAINING:", len(train_tfrecords))
+print("LEN VALID:", len(valid_tfrecords))
 
 """# Model"""
 
@@ -142,25 +143,25 @@ print(complete_model.summary())
 #print(model.summary())
 """# Model Training"""
 
-# model.compile(optimizer='rmsprop', loss='mse', metrics = ['accuracy'])
-model.compile(optimizer='rmsprop',loss='mse',metrics=['accuracy'])
+# model.compile(optimizer = 'rmsprop', loss = 'mse', metrics = ['accuracy'])
+model.network.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
 
 
-callback_earlystop=EarlyStopping(monitor='loss',patience=5)
+callback_earlystop = EarlyStopping(monitor='loss', patience=5)
 
-checkpoint_filepath = 'Models/checkpoint/vanilla_ae_{epoch:04d}.h5'
+checkpoint_filepath = root_dir + 'Models/checkpoint/vanilla_ae_{epoch:04d}.h5'
 callback_checkpoint = ModelCheckpoint(
-     filepath=checkpoint_filepath,
-     save_weights_only=False,
-     period=1)
+    filepath=checkpoint_filepath,
+    save_weights_only=False,
+    period=1)
 
 
-model.summary()
-
-model.fit(train_dataset,
-        epochs=100,
-        steps_per_epoch=len(train_tfrecords)/BATCH_SIZE,
-        callbacks=[callback_earlystop,callback_checkpoint])
+# model.summary()
+model.network.fit(train_dataset,
+          epochs=100,
+          steps_per_epoch=len(train_tfrecords) / BATCH_SIZE,
+          callbacks=[callback_earlystop, callback_checkpoint])
+sys.exit(0)
 
 now = datetime.now()
 dt_string = now.strftime("%d_%m_%H_%M")

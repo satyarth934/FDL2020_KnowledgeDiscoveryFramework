@@ -39,13 +39,16 @@ def decoder(input_shape):
     return model
 
 class Autoencoder:
-    def __init__(self,is_fusion, depth_after_fusion):
-        self.encoder = _build_encoder()
-        self.boolfusion=is_fusion
-        if self.boolfusion:
-            self.fusion = FusionLayer()
-        self.after_fusion = Conv2D(depth_after_fusion, (1, 1), activation="relu")
-        self.decoder = _build_decoder(depth_after_fusion)
+    # def __init__(self, is_fusion, depth_after_fusion):
+    def __init__(self):
+        self.network = _build_network()
+        # self.encoder = _build_encoder()
+
+        # self.boolfusion=is_fusion
+        # if self.boolfusion:
+        #     self.fusion = FusionLayer()
+        # self.after_fusion = Conv2D(depth_after_fusion, (1, 1), activation="relu")
+        # self.decoder = _build_decoder(depth_after_fusion)
 
 
     def build_fusion(self, img_l, img_emb):
@@ -64,9 +67,13 @@ class Autoencoder:
         return self.decoder(fusion)
 
 
-def _build_encoder():
+def _build_network():
+    input_channels = 3
+    output_channels = 3
+
+    # Encoder
     model = Sequential(name="encoder")
-    model.add(InputLayer(input_shape=(None, None, 3)))
+    model.add(InputLayer(input_shape=(None, None, input_channels)))
     model.add(Conv2D(64, (3, 3), activation="relu", padding="same", strides=2))
     model.add(Conv2D(128, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(128, (3, 3), activation="relu", padding="same", strides=2))
@@ -75,6 +82,18 @@ def _build_encoder():
     model.add(Conv2D(512, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(512, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(256, (3, 3), activation="relu", padding="same"))
+    
+    model.add(Conv2D(256, (1, 1), activation="relu", padding="same"))
+    
+    model.add(Conv2D(128, (3, 3), activation="relu", padding="same"))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
+    model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(32, (3, 3), activation="relu", padding="same"))
+    model.add(Conv2D(output_channels, (3, 3), activation="tanh", padding="same"))
+    model.add(UpSampling2D((2, 2)))
+
     return model
 
 

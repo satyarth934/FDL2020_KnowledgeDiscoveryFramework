@@ -92,7 +92,8 @@ def from_tfrecords(records_globs,split,batch_size):
 
 
 if __name__=="__main__":
-    raw_directory="Datasets/MODIS_MCD43A4/"
+    # raw_directory="Datasets/MODIS_MCD43A4/"
+    raw_directory="/home/satyarth934/Projects/NASA_FDL_2020/Datasets/MODIS_MCD43A4/"
     image_directory=raw_directory+"Globe/training_set/"
 
 

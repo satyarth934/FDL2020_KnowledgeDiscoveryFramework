@@ -83,9 +83,10 @@ import tensorflow as tf
 
 # Imports for Autoencoder
 import utils
-import network_definition as nd
+from network_definition import encoder, decoder
 from utils_data import parser, from_tfrecords
-
+from keras.layers import Input
+from keras.models import Model
 # Check to see if GPU is being used
 tensorflow.test.gpu_device_name()
 
@@ -117,17 +118,28 @@ print("LEN VALID:",len(valid_tfrecords))
 
 """# Model"""
 
-model = nd.Autoencoder(is_fusion=False,depth_after_fusion=256)
-print("---------------------------------------------")
-print("Encoder:")
-print(model.encoder.summary())
-print("Encoder out shape:",model.encoder.output_shape)
-print("Decoder:")
-print(model.decoder.summary())
-print("Decoder out shape:",model.decoder.output_shape)
+#model = nd.Autoencoder(is_fusion=False,depth_after_fusion=256)
+#print("---------------------------------------------")
+#print("Encoder:")
+#print(model.encoder.summary())
+#print("Encoder out shape:",model.encoder.output_shape)
+#print("Decoder:")
+#print(model.decoder.summary())
+#print("Decoder out shape:",model.decoder.output_shape)
 
+#image=Input(shape=dims)
+encoder_model=encoder(dims)
+encoding_depth=15
+decoder_model=decoder(encoder_model.output_shape)
+complete_model=Model(encoder_model.input)
+print(encoder_model.output_shape)
+print(encoder_model.summary())
+complete_model=decoder_model(complete_model.output)
+
+print(complete_model.summary())
 #model = model.build()
-
+#complete_model=tf.keras.Model(inputs=model.encoder.input,outputs=
+#print(model.summary())
 """# Model Training"""
 
 # model.compile(optimizer='rmsprop', loss='mse', metrics = ['accuracy'])

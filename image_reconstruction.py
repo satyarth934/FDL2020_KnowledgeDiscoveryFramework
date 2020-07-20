@@ -39,7 +39,7 @@ Definition of Done: ...
 # Change to current dataset
 import os
 import sys
-# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 # Imports from Colab 2
 import math
@@ -113,8 +113,6 @@ valid_dataset=from_tfrecords(records_globs=valid_tfrecords,
                                 batch_size=BATCH_SIZE)
 
 print("LEN TRAINING:",len(train_tfrecords))
-print("LEN VALID:",len(valid_tfrecords))
-
 """# Model"""
 
 #model = nd.Autoencoder(is_fusion=False,depth_after_fusion=256)

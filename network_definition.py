@@ -13,6 +13,7 @@ from fusion_layer import FusionLayer
 
 
 def encoder(input_shape):
+
     model = Sequential(name="encoder")
     model.add(Input(shape=input_shape))
     model.add(Conv2D(32, (3, 3), activation="relu", padding="same", strides=2))
@@ -25,6 +26,9 @@ def encoder(input_shape):
     model.add(Conv2D(15, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(5,  (3, 3), activation="relu", padding="same"))
     return model
+
+
+
 
 def decoder(input_shape):
     model = Sequential(name="decoder")
@@ -54,8 +58,8 @@ class Autoencoder:
         fusion=self.fusion([image_enc,image_emb])
         fusion=self.after_fusion(fusion)
         return self.decoder(fusion)
-   
-   
+
+
     def build(self):
         img_enc = self.encoder()
 

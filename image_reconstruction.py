@@ -39,7 +39,7 @@ Definition of Done: ...
 # Change to current dataset
 import os
 import sys
-# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 # Imports from Colab 2
 import math
@@ -103,18 +103,18 @@ valid_tfrecords=glob.glob(valid_tfrecords_dir)
 test_tfrecords=glob.glob(test_tfrecords_dir)
 
 """# Dataloader creation and test"""
-
-train_dataset=from_tfrecords(records_globs=train_tfrecords,
-                                split="train",
-                                batch_size=BATCH_SIZE)
-
-valid_dataset=from_tfrecords(records_globs=valid_tfrecords,
-                                split="valid",
-                                batch_size=BATCH_SIZE)
-
-
-print("LEN TRAINING:",len(train_tfrecords))
-print("LEN VALID:",len(valid_tfrecords))
+#
+# train_dataset=from_tfrecords(records_globs=train_tfrecords,
+#                                 split="train",
+#                                 batch_size=BATCH_SIZE)
+#
+# valid_dataset=from_tfrecords(records_globs=valid_tfrecords,
+#                                 split="valid",
+#                                 batch_size=BATCH_SIZE)
+#
+#
+# print("LEN TRAINING:",len(train_tfrecords))
+# print("LEN VALID:",len(valid_tfrecords))
 
 """# Model"""
 
@@ -130,12 +130,16 @@ print("LEN VALID:",len(valid_tfrecords))
 #image=Input(shape=dims)
 encoder_model=encoder(dims)
 encoding_depth=15
-decoder_model=decoder(encoder_model.output_shape)
-complete_model=Model(encoder_model.input)
-print(encoder_model.output_shape)
 print(encoder_model.summary())
-complete_model=decoder_model(complete_model.output)
-
+decoder_model=decoder(encoder_model.output_shape[1:])
+print(decoder_model.summary())
+complete_model=Sequential()
+complete_model.add(encoder_model)
+complete_model.add(decoder_model)
+# print(encoder_model.output_shape)
+# print(encoder_model.summary())
+# complete_model=decoder_model(complete_model.output)
+complete_model.build(input_shape=(None,400,400,3))
 print(complete_model.summary())
 #model = model.build()
 #complete_model=tf.keras.Model(inputs=model.encoder.input,outputs=

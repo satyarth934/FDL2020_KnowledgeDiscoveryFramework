@@ -36,7 +36,7 @@ modelName = "KDF_modis"
 print(os.path.abspath(os.curdir))
 print(os.listdir(dataPath))
 
-image_globs = glob.glob(dataPath + '2020169/np_arrays/*.npy')
+image_globs = glob.glob(dataPath + '*/np_arrays/*.npy')
 print(len(image_globs))
 print("-----------------------------------------------------------------------------")
 
@@ -65,9 +65,9 @@ bool_generate = False
 #                                    zoom_range=0.1,
 #                                    horizontal_flip=True)
 
-batch_size = 16
+batch_size = 32
 print("LEN TRAINING:", len(train_image_globs))
-train_dataGenerator = utils.CustomDataGenerator(train_image_globs)
+train_dataGenerator = utils.CustomDataGenerator(train_image_globs, batch_size=batch_size)
 
 # def image_a_b_gen(batch_size):
 #     for batch in train_dataGenerator.flow(dataset,
@@ -137,23 +137,22 @@ complete_model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
 
 callback_earlystop = EarlyStopping(monitor='loss', patience=5)
 
-checkpoint_filepath = '/tmp/Models/checkpoint/model2_{epoch:04d}.h5'
+checkpoint_filepath = 'Models/checkpoint/model2_{epoch:04d}.h5'
 callback_checkpoint = ModelCheckpoint(
     filepath=checkpoint_filepath,
     save_weights_only=False,
-    period=1)
+    period=5)
 
 
 complete_model.fit_generator(train_dataGenerator,
-                    epochs=20,
+                    epochs=100,
                     steps_per_epoch=len(train_image_globs) / batch_size,
                     callbacks=[callback_earlystop, callback_checkpoint],
                     use_multiprocessing=True,
                     workers=10,
                     max_queue_size=10)
-sys.exit(0)
 
 now = datetime.now()
 dt_string = now.strftime("%d_%m_%H_%M")
 print(dt_string)
-model.save('Models/Colorization_MODIS_Exp_Custom_' + dt_string)
+model.save('Models/AE_MODIS_Exp_Custom_' + dt_string)

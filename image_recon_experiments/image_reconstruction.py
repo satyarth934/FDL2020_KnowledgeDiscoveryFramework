@@ -3,6 +3,7 @@
 # Change to current dataset
 import sys
 # sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+sys.dont_write_bytecode = True
 
 # Imports from Colab 2
 import tensorflow as tf

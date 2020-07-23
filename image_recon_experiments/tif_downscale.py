@@ -3,6 +3,9 @@ This code downscales an input geotiff into one of lower resolution
 
 """
 
+import sys
+sys.dont_write_bytecode = True
+
 # Import packages
 import rasterio
 import rasterio.plot

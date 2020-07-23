@@ -1,3 +1,6 @@
+import sys
+sys.dont_write_bytecode = True
+
 import tensorflow as tf
 import glob
 import numpy as np

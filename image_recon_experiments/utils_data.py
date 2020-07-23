@@ -6,6 +6,9 @@ Sources:
 1. tensorflow/models/research/inception/inception/data/build_image_data.py
 
 '''
+import sys
+sys.dont_write_bytecode = True
+
 import os
 import numpy as np
 import tensorflow as tf

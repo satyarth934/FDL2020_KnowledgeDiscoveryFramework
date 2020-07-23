@@ -1,6 +1,8 @@
 # Change to current dataset
-import os
 import sys
+sys.dont_write_bytecode = True
+
+import os
 import glob
 from datetime import datetime
 

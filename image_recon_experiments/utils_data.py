@@ -6,6 +6,9 @@ Sources:
 1. tensorflow/models/research/inception/inception/data/build_image_data.py
 
 '''
+import sys
+sys.dont_write_bytecode = True
+
 import os
 import numpy as np
 import tensorflow as tf
@@ -60,7 +63,8 @@ def to_tfrecords(raw_directory,image_globs,label_globs,split):
         writer.write(serialized)  # Write the serialized data to the TFRecords file.
 
 def parser(proto,shape=(400,400,3)):
-    data={'image': tf.io.FixedLenFeature([],tf.string)}
+    data={'image': tf.io.FixedLenFeature([],tf.string),
+          'label': tf.io.FixedLenFeature([],tf.string)}
     parsed_example=tf.io.parse_single_example(serialized=proto,features=data)
     image_raw=parsed_example['image']
     image=tf.io.decode_raw(image_raw,tf.float32)

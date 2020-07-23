@@ -5,35 +5,43 @@ In the neck of the conv-deconv network use the features from a feature extractor
 (e.g. Inception) and fuse them with the conv output.
 """
 
+import sys
+sys.dont_write_bytecode = True
+
 #from keras.engine import InputLayer
-from tensorflow.keras.layers import Conv2D, UpSampling2D, Input
+from tensorflow.keras.layers import Conv2D, UpSampling2D, Input, Conv2DTranspose
 from tensorflow.keras.models import Sequential
 
 from fusion_layer import FusionLayer
 
 
 def encoder(input_shape):
+
     model = Sequential(name="encoder")
     model.add(Input(shape=input_shape))
-    model.add(Conv2D(32, (5, 5), activation="relu", padding="same", strides=2))
+    model.add(Conv2D(32, (3, 3), activation="relu", padding="same", strides=2))
     model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(64, (3, 3), activation="relu", padding="same", strides=2))
     model.add(Conv2D(128, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(128, (3, 3), activation="relu", padding="same", strides=2))
     model.add(Conv2D(256, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(256, (3, 3), activation="relu", padding="same",strides=3))
-    model.add(Conv2D(15, (5, 5), activation="relu", padding="same"))
+    model.add(Conv2D(15, (3, 3), activation="relu", padding="same"))
+    model.add(Conv2D(5,  (3, 3), activation="relu", padding="same"))
     return model
+
+
+
 
 def decoder(input_shape):
     model = Sequential(name="decoder")
     model.add(Input(shape=input_shape))
-    model.add(Conv2D(128, (3, 3), activation="relu", padding="same"))
+    model.add(Conv2DTranspose(128, (3, 3), activation="relu", padding="same"))
     model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
-    model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
+    model.add(Conv2DTranspose(64, (3, 3), activation="relu", padding="same"))
+    model.add(Conv2DTranspose(64, (3, 3), activation="relu", padding="same"))
     model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(32, (3, 3), activation="relu", padding="same"))
+    model.add(Conv2DTranspose(32, (3, 3), activation="relu", padding="same"))
     model.add(Conv2D(3, (3, 3), activation="tanh", padding="same"))
     model.add(UpSampling2D((2, 2)))
     return model
@@ -56,8 +64,8 @@ class Autoencoder:
         fusion=self.fusion([image_enc,image_emb])
         fusion=self.after_fusion(fusion)
         return self.decoder(fusion)
-   
-   
+
+
     def build(self):
         img_enc = self.encoder()
 

@@ -1,3 +1,6 @@
+import sys
+sys.dont_write_bytecode = True
+
 from keras import backend as K
 from keras.engine import Layer
 

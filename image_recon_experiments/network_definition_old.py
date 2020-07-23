@@ -5,6 +5,9 @@ In the neck of the conv-deconv network use the features from a feature extractor
 (e.g. Inception) and fuse them with the conv output.
 """
 
+import sys
+sys.dont_write_bytecode = True
+
 from keras.engine import InputLayer
 from keras.layers import Conv2D, UpSampling2D
 from keras.models import Sequential

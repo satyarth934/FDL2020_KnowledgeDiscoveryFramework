@@ -39,7 +39,8 @@ Definition of Done: ...
 # Change to current dataset
 import os
 import sys
-# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+sys.dont_write_bytecode = True
 
 # Imports from Colab 2
 import math
@@ -113,10 +114,7 @@ valid_dataset = from_tfrecords(records_globs=valid_tfrecords,
                                split="valid",
                                batch_size=BATCH_SIZE)
 
-
-print("LEN TRAINING:", len(train_tfrecords))
-print("LEN VALID:", len(valid_tfrecords))
-
+print("LEN TRAINING:",len(train_tfrecords))
 """# Model"""
 
 #model = nd.Autoencoder(is_fusion=False,depth_after_fusion=256)
@@ -130,21 +128,27 @@ print("LEN VALID:", len(valid_tfrecords))
 
 #image=Input(shape=dims)
 encoder_model=encoder(dims)
-encoding_depth=15
-decoder_model=decoder(encoder_model.output_shape)
-complete_model=Model(encoder_model.input)
-print(encoder_model.output_shape)
+print("Encoder")
 print(encoder_model.summary())
-complete_model=decoder_model(complete_model.output)
 
+encoding_depth=15
+decoder_model=decoder(encoder_model.output_shape[1:])
+print("Decoder")
+print(decoder_model.summary())
+
+complete_model=Sequential()
+complete_model.add(encoder_model)
+complete_model.add(decoder_model)
+complete_model.build(input_shape=(None,*dims))
+
+print("Complete Model")
 print(complete_model.summary())
-#model = model.build()
-#complete_model=tf.keras.Model(inputs=model.encoder.input,outputs=
-#print(model.summary())
+
+
 """# Model Training"""
 
-# model.compile(optimizer = 'rmsprop', loss = 'mse', metrics = ['accuracy'])
-model.network.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
+# model.compile(optimizer='rmsprop', loss='mse', metrics = ['accuracy'])
+complete_model.compile(optimizer='rmsprop',loss='mse',metrics=['accuracy'])
 
 
 callback_earlystop = EarlyStopping(monitor='loss', patience=5)
@@ -156,14 +160,12 @@ callback_checkpoint = ModelCheckpoint(
     period=1)
 
 
-# model.summary()
-model.network.fit(train_dataset,
-          epochs=100,
-          steps_per_epoch=len(train_tfrecords) / BATCH_SIZE,
-          callbacks=[callback_earlystop, callback_checkpoint])
-sys.exit(0)
+complete_model.fit(train_dataset,
+        epochs=100,
+        steps_per_epoch=len(train_tfrecords)/BATCH_SIZE,
+        callbacks=[callback_earlystop,callback_checkpoint])
 
 now = datetime.now()
 dt_string = now.strftime("%d_%m_%H_%M")
 print(dt_string)
-model.save('Models/vanilla_ae_MODIS_Exp_Custom_' + dt_string)
+complete_model.save('Models/vanilla_ae_MODIS_Exp_Custom_' + dt_string)

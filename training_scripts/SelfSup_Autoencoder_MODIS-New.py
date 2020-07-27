@@ -20,7 +20,7 @@ NORMALIZE = True
 OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/baseAE_median"
 TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/baseAE_median"
 ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/baseAE_median"
-
+PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/baseAE_median/train_test_paths.npy"
 
 
 # Check to see if GPU is being used

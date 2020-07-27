@@ -31,3 +31,6 @@ from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from tensorflow.keras.layers import PReLU
+
+from tf_explain.callbacks.activations_visualization import ActivationsVisualizationCallback
+from tf_explain.core.activations import ExtractActivations

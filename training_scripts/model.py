@@ -1,4 +1,5 @@
 from import_modules import *
+sys.dont_write_bytecode = True
 
 
 def createModel(dims):

@@ -13,14 +13,17 @@ Parameters:
 3. Tensorboard Log Directory
 4. Model path to save
 """
-# DATA_PATH = "/home/satyarth934/data/modis_data_products/*/array_3bands_normalized/448/*"
+DATA_PATH = "/home/satyarth934/data/modis_data_products/*/array_3bands_normalized/448/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/mean_stdev_removed/*"
-DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
+# DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
 NORMALIZE = True
-OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/baseAE_median"
-TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/baseAE_median"
-ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/baseAE_median"
-PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/baseAE_median/train_test_paths.npy"
+MODEL_NAME = "baseAE_orig"
+OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + MODEL_NAME
+TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/" + MODEL_NAME
+ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME
+PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME + "/train_test_paths.npy"
+
+NUM_EPOCHS = 200
 
 
 # Check to see if GPU is being used
@@ -41,6 +44,7 @@ random.shuffle(img_paths)
 train_test_split = 0.8
 X_train_paths = img_paths[:int(train_test_split * len(img_paths))]
 X_test_paths = img_paths[int(train_test_split * len(img_paths)):]
+np.save(PATH_LIST_LOCATION, [X_train_paths, X_test_paths])
 
 dims = (448, 448, 3)
 
@@ -159,7 +163,7 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOG_DI
 
 
 complete_model.fit(train_dataset,
-                   epochs=5,
+                   epochs=NUM_EPOCHS,
                    steps_per_epoch=len(X_train_reshaped) / batch_size,
                    validation_data=test_dataset,
                    validation_steps=len(X_test_reshaped) / batch_size,
@@ -174,10 +178,10 @@ complete_model.save(OUTPUT_MODEL_PATH)
 # ## Model Testing
 
 # Define the Activation Visualization explainer
-index = np.random.randint(0, len(X_test_reshaped))
+# index = np.random.randint(0, len(X_test_reshaped))
 # image = input_test[index].reshape((1, 32, 32, 3))
 # image = np.expand_dims(X_test_reshaped[index],0)
-image = X_test_reshaped[index:index + 10]
+image = X_test_reshaped[:10]
 label = image
 print('val:', image.shape)
 

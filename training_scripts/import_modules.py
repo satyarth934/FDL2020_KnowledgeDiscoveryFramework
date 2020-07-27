@@ -1,6 +1,8 @@
 import os
 from os import path
 import sys
+sys.dont_write_bytecode = True
+
 import math
 import cv2  # Read raw image
 import glob

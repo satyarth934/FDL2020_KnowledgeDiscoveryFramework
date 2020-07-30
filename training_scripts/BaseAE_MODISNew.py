@@ -45,7 +45,6 @@ def main():
 	train_test_split = 0.8
 	X_train_paths = img_paths[:int(train_test_split * len(img_paths))]
 	X_test_paths = img_paths[int(train_test_split * len(img_paths)):]
-	np.save(PATH_LIST_LOCATION, [X_train_paths, X_test_paths])
 
 	dims = (448, 448, 3)
 

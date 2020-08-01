@@ -21,10 +21,10 @@ Parameters:
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/mean_stdev_removed/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed_gap_filled/*"
-DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
+DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes_reorganized"
 
 NORMALIZE = True
-MODEL_NAME = "baseAE_hurricane_try2"
+MODEL_NAME = "baseAE_hurricane"
 OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + MODEL_NAME
 TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/" + MODEL_NAME
 ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME
@@ -35,11 +35,11 @@ BATCH_SIZE = 64
 INTERPOLATE_DATA_GAP = False
 
 
-# ### Check to see if GPU is being used ###############
-# print(tensorflow.test.gpu_device_name())
-# print("Num GPUs Available: ", tf.config.experimental.list_physical_devices('GPU'))
-# print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-#######################################################
+# # Check to see if GPU is being used
+print(tensorflow.test.gpu_device_name())
+print("Num GPUs Available: ", tf.config.experimental.list_physical_devices('GPU'))
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+
 
 # # Custom data generator to read from the image paths sequence
 # class CustomDataGenerator(data_utils.Sequence):
@@ -89,51 +89,38 @@ INTERPOLATE_DATA_GAP = False
 #         return X, x
 
 
-def customGenerator(input_file_paths, dims):
-    for i, file_path in enumerate(input_file_paths):
-        x = resize(plt.imread((file_path.decode("utf-8")))[:,:,:3], dims)
-        while ((x.min()==1.0) and (x.max()==1.0)):
-            random_idx = np.random.randint(len(input_file_paths))
-            new_file = (input_file_paths[random_idx])
-            x = resize(plt.imread((new_file.decode("utf-8")))[:,:,:3], dims)
-        yield x, x
-
-
 def main():
-    dims = (448, 448, 3)
-    
-    # Dataloader creation and test
-    img_paths = glob.glob(DATA_PATH)
-    print("len(img_paths):", len(img_paths))
+#     # Dataloader creation and test
+#     img_paths = glob.glob(DATA_PATH)
+#     print("len(img_paths):", len(img_paths))
+#     random.shuffle(img_paths)
 
     train_test_split = 0.8
-    X_train_paths = img_paths[:int(train_test_split * len(img_paths))]
-    X_test_paths = img_paths[int(train_test_split * len(img_paths)):]
-    
-#     X_train_path = DATA_PATH + "/train"
-#     X_test_path = DATA_PATH + "/test"
+#     X_train_paths = img_paths[:int(train_test_split * len(img_paths))]
+#     X_test_paths = img_paths[int(train_test_split * len(img_paths)):]
 
-#     # Loading Data
-####################### Using Image Data Generator
-#     train_generator = ImageDataGenerator(horizontal_flip=True,
-#                                        vertical_flip=True,
-#                                        validation_split=(1 - train_test_split))
-    
-#     X_train = train_generator.flow_from_directory(X_train_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324, subset='training')
-#     X_valid = train_generator.flow_from_directory(X_train_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324, subset='validation')
-#     X_test = ImageDataGenerator().flow_from_directory(X_test_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324) 
+    X_train_path = DATA_PATH + "/train"
+    X_test_path = DATA_PATH + "/test"
+    dims = (448, 448, 3)
 
-#     sample_train = next(X_train)
-#     print("sample train:", sample_train[0].shape, sample_train[1].shape)
-#     for i, img in enumerate(sample_train[0][0][:10]):
-#         print(np.sum(np.isnan(img)), img.min(), img.max())
-#     sample_test = next(X_test)
-#     print("sample test:", sample_test[0].shape, sample_test[1].shape)
-########################
-
+    # Loading Data
 #     X_train = CustomDataGenerator(X_train_paths, batch_size=32, dim=dims)
 #     X_test = CustomDataGenerator(X_train_paths, batch_size=32, dim=dims)
 
+    train_generator = ImageDataGenerator(horizontal_flip=True,
+                                       vertical_flip=True,
+                                       validation_split=(1 - train_test_split))
+    
+    X_train = train_generator.flow_from_directory(X_train_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324, subset='training')
+    X_valid = train_generator.flow_from_directory(X_train_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324, subset='validation')
+    X_test = ImageDataGenerator().flow_from_directory(X_test_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324) 
+
+    sample_train = next(X_train)
+    print("sample train:", sample_train[0].shape, sample_train[1].shape)
+    for i, img in enumerate(sample_train[0][0][:10]):
+        print(np.sum(np.isnan(img)), img.min(), img.max())
+    sample_test = next(X_test)
+    print("sample test:", sample_test[0].shape, sample_test[1].shape)
 
 #     # RESHAPE IMAGES TO THE DESIRED SIZE
 #     X_train_reshaped = X_train[0]
@@ -142,43 +129,24 @@ def main():
 #     print(X_test_reshaped[0].shape, X_test_reshaped[1].shape)
 
 #     # More efficient data fetch pipeline
-    AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
+#     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
     
-#     X_train = customGenerator(X_train_paths, dims)
-#     X_test = customGenerator(X_test_paths, dims)
-    train_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(np.float32, np.float32), output_shapes=(dims, dims), args=[X_train_paths, dims])
-    output = list(train_dataset.take(1).as_numpy_iterator())
+#     train_dataset = tf.data.Dataset.from_generator(generator=X_train, output_types=(tf.float32, tf.float32))
+#     test_dataset = tf.data.Dataset.from_generator(generator=X_test, output_types=(tf.float32, tf.float32))
+    
+# #     train_dataset = tf.data.Dataset.from_tensor_slices((X_train_reshaped, X_train_reshaped))
+# #     test_dataset = tf.data.Dataset.from_tensor_slices((X_test_reshaped, X_test_reshaped))
 
-    print("train_dataset:", train_dataset)
-    print("len(output):", len(output))
-    print("len(output[0]):", len(output[0]))
-    x,y = output[0]
-    print("Printing the output:", x.shape, y.shape)
-    print("x:", x.min(), x.max())
-    print("y:", y.min(), y.max())
-    print(x.shape, y.shape)
-
-    
-    
-    test_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims])
-    
-#     train_dataset = tf.data.Dataset.from_tensor_slices((X_train_reshaped, X_train_reshaped))
-#     test_dataset = tf.data.Dataset.from_tensor_slices((X_test_reshaped, X_test_reshaped))
-
-    train_dataset = train_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
-    train_dataset = train_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
-    train_dataset = train_dataset.batch(BATCH_SIZE)
-    train_dataset = train_dataset.repeat()
+#     train_dataset = train_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
+#     train_dataset = train_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
+#     train_dataset = train_dataset.batch(BATCH_SIZE)
+#     train_dataset = train_dataset.repeat()
 #     train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
 
-    test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
-    test_dataset = test_dataset.cache()
+#     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
+#     test_dataset = test_dataset.cache()
 #     test_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
 
-    
-    print("train_dataset:", train_dataset)
-    sys.exit(0)
-    
     
     # ARCHITECTURE
     complete_model = model.createModel(dims)

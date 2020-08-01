@@ -4,7 +4,11 @@
 from import_modules import *
 import model
 import utils
+sys.dont_write_bytecode = True
 
+import wandb
+from wandb.keras import WandbCallback
+wandb.init(config={"hyper": "parameter"})
 
 """
 Parameters:
@@ -15,15 +19,18 @@ Parameters:
 """
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/*/array_3bands_normalized/448/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/mean_stdev_removed/*"
-DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
+# DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
+DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed_gap_filled/*"
 NORMALIZE = True
-MODEL_NAME = "baseAE_median_median_in_swatch"
+MODEL_NAME = "baseAE_median_localRandom_in_swatch"
 OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + MODEL_NAME
 TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/" + MODEL_NAME
 ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME
 PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME + "/train_test_paths.npy"
 
 NUM_EPOCHS = 200
+BATCH_SIZE = 64
+INTERPOLATE_DATA_GAP = False
 
 
 # # Check to see if GPU is being used
@@ -53,11 +60,6 @@ def main():
     print("X_train:", X_train.shape)
     print("X_test:", X_test.shape)
 
-    # To check NaN pixel images
-    nan_pixels_per_image = utils.nansInData(X_train)
-    # plt.scatter(x=np.arange(0,len(nan_pixels_per_image)), y=nan_pixels_per_image)
-    # plt.savefig("nan_scatter.png")
-
     # Checking min max to see if normalization is needed or not
     print("Before normalization")
     print(np.nanmin(X_train), np.nanmax(X_train))
@@ -70,29 +72,50 @@ def main():
     print("After normalization")
     print(np.nanmin(X_train), np.nanmax(X_train))
     print(np.nanmin(X_test), np.nanmax(X_test))
+    
+    # To check NaN pixel images
+    nanpix_per_img_train = utils.nansInData(X_train)
+    nanpix_per_img_test = utils.nansInData(X_test)
+    # plt.scatter(x=np.arange(0,len(nan_pixels_per_image)), y=nan_pixels_per_image)
+    # plt.savefig("nan_scatter.png")
+    
+    # Remove unusable images
+    unusable_train_img_idxs = np.where(np.array(nanpix_per_img_train) > 20000)[0]
+    for i in reversed(sorted(unusable_train_img_idxs)):
+        X_train = np.delete(X_train, i, 0)
+    
+    unusable_test_img_idxs = np.where(np.array(nanpix_per_img_test) > 20000)[0]
+    for i in reversed(sorted(unusable_test_img_idxs)):
+        X_test = np.delete(X_test, i, 0)
 
     # Interpolate nan values
-    X_train = utils.interpolateNaNValues(X_train)
-    X_test = utils.interpolateNaNValues(X_test)
+    if INTERPOLATE_DATA_GAP:
+        X_train = utils.interpolateNaNValues(X_train)
+        X_test = utils.interpolateNaNValues(X_test)
 
-    # To check NaN pixel images
-    nan_pixels_per_image = utils.nansInData(X_train)
+    # To check NaN pixel images after image removal and interpolation
+    nanpix_per_img_train = utils.nansInData(X_train)
+    nanpix_per_img_test = utils.nansInData(X_test)
+    
+    if np.sum(nanpix_per_img_train) > 0:
+        X_train[np.isnan(X_train)] = 0.0
+    
+    if np.sum(nanpix_per_img_test) > 0:
+        X_test[np.isnan(X_test)] = 0.0
 
     X_train_reshaped = X_train
     del X_train
     X_test_reshaped = X_test
     del X_test
 
-
-    batch_size = 64
     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
     
     train_dataset = tf.data.Dataset.from_tensor_slices((X_train_reshaped, X_train_reshaped))
     test_dataset = tf.data.Dataset.from_tensor_slices((X_test_reshaped, X_test_reshaped))
 
     train_dataset = train_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
-    train_dataset = train_dataset.cache().shuffle(buffer_size=3*batch_size)
-    train_dataset = train_dataset.batch(batch_size)
+    train_dataset = train_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
+    train_dataset = train_dataset.batch(BATCH_SIZE)
     train_dataset = train_dataset.repeat()
     train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
 
@@ -127,10 +150,10 @@ def main():
 
     complete_model.fit(train_dataset,
                        epochs=NUM_EPOCHS,
-                       steps_per_epoch=len(X_train_reshaped) / batch_size,
+                       steps_per_epoch=len(X_train_reshaped) / BATCH_SIZE,
                        validation_data=test_dataset,
-                       validation_steps=len(X_test_reshaped) / batch_size,
-                       callbacks=[callbacks, tensorboard_callback],
+                       validation_steps=len(X_test_reshaped) / BATCH_SIZE,
+                       callbacks=[callbacks, tensorboard_callback, WandbCallback()],
                        use_multiprocessing=True
                        )
 

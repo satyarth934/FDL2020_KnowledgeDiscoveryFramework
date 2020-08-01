@@ -29,10 +29,14 @@ def getMedian():
     return median
 
 
-def getData(paths, dims):
+def getData(paths, dims, file_type="npy"):
     loaded_data = np.empty((len(paths), *dims))
-    for i, p in enumerate(paths):
-        loaded_data[i, :, :, :] = np.load(p)
+    if file_type == "npy":
+        for i, p in enumerate(paths):
+            loaded_data[i, :, :, :] = np.load(p)
+    elif file_type in ["png", "jpeg", "jpg"]:
+        for i, p in enumerate(paths):
+            loaded_data[i, :, :, :] = resize(plt.imread(p)[:,:,:3], dims)
     
     return loaded_data
 

@@ -32,10 +32,10 @@ def getMedian():
 def getData(paths, dims, file_type="npy"):
     loaded_data = np.empty((len(paths), *dims))
     if file_type == "npy":
-        for i, p in enumerate(paths):
+        for i, p in enumerate(tqdm(paths)):
             loaded_data[i, :, :, :] = np.load(p)
     elif file_type in ["png", "jpeg", "jpg"]:
-        for i, p in enumerate(paths):
+        for i, p in enumerate(tqdm(paths)):
             loaded_data[i, :, :, :] = resize(plt.imread(p)[:,:,:3], dims)
     
     return loaded_data
@@ -67,7 +67,7 @@ def interpolateNaNValues(dataset):
     plt.imshow(median_img); plt.savefig("median_img.png")
 
     # METHOD 3: Replace with the closest N randomly chosen points in the vicinity of the nan pixels -----
-    
+    # Check "fill_data_gaps.py"
 
     return dataset
 

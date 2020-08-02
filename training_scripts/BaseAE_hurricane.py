@@ -106,9 +106,12 @@ def main():
     img_paths = glob.glob(DATA_PATH)
     print("len(img_paths):", len(img_paths))
 
-    train_test_split = 0.8
-    X_train_paths = img_paths[:int(train_test_split * len(img_paths))]
-    X_test_paths = img_paths[int(train_test_split * len(img_paths)):]
+    train_split = 0.6
+    valid_split = 0.2
+    test_split = 0.2
+    X_train_paths = img_paths[:int(train_split * len(img_paths))]
+    X_valid_paths = img_paths[int(train_split * len(img_paths)):int((train_split + valid_split) * len(img_paths))]
+    X_test_paths = img_paths[len(img_paths) - int(test_split * len(img_paths)):]
     
 #     X_train_path = DATA_PATH + "/train"
 #     X_test_path = DATA_PATH + "/test"
@@ -149,6 +152,7 @@ def main():
     train_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(np.float32, np.float32), output_shapes=(dims, dims), args=[X_train_paths, dims])
     output = list(train_dataset.take(1).as_numpy_iterator())
 
+    print("@#@#@#@#@#@#@ 1")
     print("train_dataset:", train_dataset)
     print("len(output):", len(output))
     print("len(output[0]):", len(output[0]))
@@ -158,7 +162,7 @@ def main():
     print("y:", y.min(), y.max())
     print(x.shape, y.shape)
 
-    
+    valid_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(np.float32, np.float32), output_shapes=(dims, dims), args=[X_valid_paths, dims])
     
     test_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims])
     
@@ -169,15 +173,33 @@ def main():
     train_dataset = train_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
     train_dataset = train_dataset.batch(BATCH_SIZE)
     train_dataset = train_dataset.repeat()
-#     train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
+    train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
+    
+    valid_dataset = valid_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
+    valid_dataset = valid_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
+    valid_dataset = valid_dataset.batch(BATCH_SIZE)
+    valid_dataset = valid_dataset.repeat()
+    valid_dataset = valid_dataset.prefetch(buffer_size=AUTOTUNE)
 
     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
     test_dataset = test_dataset.cache()
-#     test_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
+    test_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
 
     
+#     print("train_dataset:", train_dataset)
+#     print(train_dataset[0])
+    output = list(train_dataset.take(1).as_numpy_iterator())
+
+    print("@#@#@#@#@#@#@ 2")
     print("train_dataset:", train_dataset)
-    sys.exit(0)
+    print("len(output):", len(output))
+    print("len(output[0]):", len(output[0]))
+    x,y = output[0]
+    print("Printing the output:", x.shape, y.shape)
+    print("x:", x.min(), x.max())
+    print("y:", y.min(), y.max())
+    print(x.shape, y.shape)
+    print("---------------------------------")
     
     
     # ARCHITECTURE
@@ -186,9 +208,13 @@ def main():
 
     complete_model.compile(optimizer='rmsprop', loss='mse')
 
-    image = np.expand_dims(X_test[0][0][0], 0)
-    # image = X_test_reshaped[0:10]
-    print(image.shape)
+    image = resize(plt.imread(X_test_paths[0])[:,:,:3], dims)
+    print("Activation visualization image shape orig:", image.shape)
+    image = np.expand_dims(image, 0)
+    print("Activation visualization image shape extended:", image.shape)
+    print("image:", image.min(), image.max())
+#     image = X_test_reshaped[0:10]
+#     print(image.shape)
 
     # Define the Activation Visualization callback
     output_dir = TENSORBOARD_LOG_DIR
@@ -203,18 +229,19 @@ def main():
     # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="./tf_callback")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOG_DIR)
 
-    complete_model.fit(X_train,
+    complete_model.fit(train_dataset,
                        epochs=NUM_EPOCHS,
-                       steps_per_epoch=X_train.samples // BATCH_SIZE,
+                       steps_per_epoch=len(X_train_paths) // BATCH_SIZE,
 #                        validation_split=0.2,
-                       validation_data=X_valid,
-                       validation_steps=X_valid.samples // BATCH_SIZE,
+                       validation_data=valid_dataset,
+                       validation_steps=len(X_valid_paths) // BATCH_SIZE,
                        callbacks=[callbacks, tensorboard_callback, WandbCallback()],
 #                        use_multiprocessing=True
                        )
 
     complete_model.save(OUTPUT_MODEL_PATH)
 
+#     sys.exit(0)
 
 
     # ## Model Testing
@@ -223,7 +250,8 @@ def main():
     # index = np.random.randint(0, len(X_test_reshaped))
     # image = input_test[index].reshape((1, 32, 32, 3))
     # image = np.expand_dims(X_test_reshaped[index],0)
-    image = X_test[0][0][:10]
+#     image = X_test[0][0][:10]
+    image = np.array([resize(plt.imread(test_img_path)[:,:,:3], dims) for test_img_path in X_test_paths[:10]])
 #     image = X_test_reshaped[:10]
     label = image
     print('val:', image.shape)

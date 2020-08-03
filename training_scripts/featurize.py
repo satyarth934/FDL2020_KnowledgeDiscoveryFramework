@@ -1,17 +1,20 @@
 from import_modules import *
 sys.dont_write_bytecode = True
+random.seed(a=13521)
 
 import utils
-import BaseAE_hurricane as aeh
+import BaseAE_UC_Merced as aeucm
 
 
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/*/array_3bands_normalized/448/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/mean_stdev_removed/*" # <- needs to be normalized
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*" # <- needs to be normalized
-DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
+# DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed_gap_filled/*"
+# DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
+DATA_PATH = "/home/satyarth934/data/proxy_data/UCMerced_LandUse/Images/*/*"
 NORMALIZE = True
 
-MODEL_NAME = "baseAE_hurricane_try2"
+MODEL_NAME = "baseAE_uc_merced"
 BASE_DIR = "/home/satyarth934/code/FDL_2020/"
 
 OUTPUT_MODEL_PATH = BASE_DIR + "Models/" + MODEL_NAME
@@ -26,25 +29,26 @@ FEATURES_OUTPUT = FEATURE_DIR + "/features.pkl"
 
 NUM_EPOCHS = 200
 INTERPOLATE_DATA_GAP = False
+IMAGE_TYPE = "tif"
 
 
-# Function to featurize the input
-def extract_features(img_array, model, layer_names):
-    outputs = [layer.output for layer in model.layers if layer.name in layer_names]          # all layer outputs
-#     print(len(outputs))
+# # Function to featurize the input
+# def extract_features(img_array, model, layer_names):
+#     outputs = [layer.output for layer in model.layers if layer.name in layer_names]          # all layer outputs
+# #     print(len(outputs))
     
-    functor = K.function([model.input], outputs)   # evaluation function
-#     print(functor)
+#     functor = K.function([model.input], outputs)   # evaluation function
+# #     print(functor)
     
-    # Testing
-    layer_outs = functor([img_array])
-#     print(len(layer_outs), layer_outs[0].shape)
-    feature_list = layer_outs[0]
+#     # Testing
+#     layer_outs = functor([img_array])
+# #     print(len(layer_outs), layer_outs[0].shape)
+#     feature_list = layer_outs[0]
     
-    flat_features = [f.flatten() for f in feature_list]
-    normed_features = [f/np.linalg.norm(f) for f in flat_features]
+#     flat_features = [f.flatten() for f in feature_list]
+#     normed_features = [f/np.linalg.norm(f) for f in flat_features]
     
-    return normed_features
+#     return normed_features
 
 
 def featurize():
@@ -52,7 +56,6 @@ def featurize():
     img_paths = glob.glob(DATA_PATH)
 
     print("len(img_paths):", len(img_paths))
-    random.seed(a=13521)
     random.shuffle(img_paths)
 
 #     train_test_split = 0.8
@@ -74,7 +77,7 @@ def featurize():
 #     feature_list = extract_features(img_array=X_test, model=model, layer_names=['conv2d_8'])
 #     print("feature_list shape:", len(feature_list), feature_list[0].shape)
     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
-    test_dataset = tf.data.Dataset.from_generator(generator=aeh.customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims])
+    test_dataset = tf.data.Dataset.from_generator(generator=aeucm.customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims, IMAGE_TYPE])
     
     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
     test_dataset = test_dataset.cache().batch(64)

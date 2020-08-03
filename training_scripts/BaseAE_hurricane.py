@@ -89,13 +89,34 @@ INTERPOLATE_DATA_GAP = False
 #         return X, x
 
 
-def customGenerator(input_file_paths, dims):
+def customGenerator(input_file_paths, dims, data_type="png"):
     for i, file_path in enumerate(input_file_paths):
-        x = resize(plt.imread((file_path.decode("utf-8")))[:,:,:3], dims)
+        if data_type.decode("utf-8") == "png":
+            img = plt.imread((file_path.decode("utf-8")))
+        elif data_type.decode("utf-8") == "npy":
+            img = np.load(file_path.decode("utf-8"))
+        x = resize(img[:,:,:3], dims)
+        
+        while (np.sum(np.isnan(x)) > 0):
+            random_idx = np.random.randint(len(input_file_paths))
+            new_file = (input_file_paths[random_idx])
+            if data_type.decode("utf-8") == "png":
+                img = plt.imread((new_file.decode("utf-8")))
+            elif data_type.decode("utf-8") == "npy":
+                img = np.load(new_file.decode("utf-8"))
+            x = resize(img[:,:,:3], dims)
+#             x = resize(plt.imread((new_file.decode("utf-8")))[:,:,:3], dims)
+            
         while ((x.min()==1.0) and (x.max()==1.0)):
             random_idx = np.random.randint(len(input_file_paths))
             new_file = (input_file_paths[random_idx])
-            x = resize(plt.imread((new_file.decode("utf-8")))[:,:,:3], dims)
+            if data_type.decode("utf-8") == "png":
+                img = plt.imread((new_file.decode("utf-8")))
+            elif data_type.decode("utf-8") == "npy":
+                img = np.load(new_file.decode("utf-8"))
+            x = resize(img[:,:,:3], dims)
+#             x = resize(plt.imread((new_file.decode("utf-8")))[:,:,:3], dims)
+            
         yield x, x
 
 

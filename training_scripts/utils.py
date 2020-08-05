@@ -72,6 +72,26 @@ def interpolateNaNValues(dataset):
     return dataset
 
 
+def getUsableImagePaths(image_paths, data_type):
+    usable_paths = []
+    for file_path in tqdm(image_paths):
+        if data_type in ["png" or "tif"]:
+            img = plt.imread((file_path))
+        elif data_type == "npy":
+            img = np.load(file_path)
+        
+        # If more than 30% if the image is nan values (USELESS)
+        if (np.sum((np.isnan(img))) / np.product(img.shape)) > 0.3:
+            continue
+        
+        # If the entire image is just a single value (USELESS)
+        if np.nanmin(img) == np.nanmax(img):
+            continue
+        
+        usable_paths.append(file_path)
+    return usable_paths
+
+
 # if __name__=="__main__":
 #     DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
     

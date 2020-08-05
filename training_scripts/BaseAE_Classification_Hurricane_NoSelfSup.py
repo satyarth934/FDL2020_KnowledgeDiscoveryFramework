@@ -22,9 +22,9 @@ Parameters:
 DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
 
 NORMALIZE = True
-MODEL_NAME = "baseAE_hurricane_try3_classification_80_10_10"
+MODEL_NAME = "baseAE_hurricane_classification_noselfsup"
 OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + MODEL_NAME
-EMBEDDING_MODEL_NAME = "baseAE_hurricane_try3"
+EMBEDDING_MODEL_NAME = "baseAE_hurricane_try2"
 EMBEDDING_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + EMBEDDING_MODEL_NAME
 TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/" + MODEL_NAME
 ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME
@@ -179,18 +179,19 @@ def main():
     # ARCHITECTURE
     print("---- Reading Model ----")
     classification_model_parent = Sequential()
-    classification_model = load_model(EMBEDDING_MODEL_PATH)
+#     classification_model = load_model(EMBEDDING_MODEL_PATH)
+    classification_model = model.createModel(dims)
     print(classification_model.summary())
     
     print("model.inputs:", classification_model.inputs)
     print("conv2d_8:", classification_model.get_layer('conv2d_8').output)
     
     layer_name = 'conv2d_8'
-    classification_model = Model(inputs=classification_model.inputs, 
+    classification_model = Model(inputs=classification_model.inputs,
                                  outputs=classification_model.get_layer(layer_name).output)
     
-    for layer in classification_model.layers:
-        layer.trainable = False
+#     for layer in classification_model.layers:
+#         layer.trainable = True
     
     classification_model_parent.add(classification_model)
     classification_model_parent.add(Flatten())

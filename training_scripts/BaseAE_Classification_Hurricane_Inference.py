@@ -23,10 +23,10 @@ Parameters:
 DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
 
 NORMALIZE = True
-MODEL_NAME = "baseAE_hurricane_try2_classification_catcrossentropy"
+MODEL_NAME = "baseAE_hurricane_try3_classification_80_10_10"
 OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + MODEL_NAME
-EMBEDDING_MODEL_NAME = "baseAE_hurricane_try2"
-EMBEDDING_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + EMBEDDING_MODEL_NAME
+# EMBEDDING_MODEL_NAME = "baseAE_hurricane_try3"
+# EMBEDDING_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + EMBEDDING_MODEL_NAME
 TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/" + MODEL_NAME
 ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME
 PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME + "/train_test_paths.npy"
@@ -110,8 +110,15 @@ def main():
     # Dataloader creation and test
     img_paths = glob.glob(DATA_PATH)
     print("len(img_paths):", len(img_paths))
+    random.shuffle(img_paths)
 
-    tiny_train_subset, tiny_valid_subset, test_subset = splitDataset(img_paths, num_samples_per_class=70)
+    train_split = 0.8
+    valid_split = 0.1
+    test_split = 0.1
+    tiny_train_subset = img_paths[:int(train_split * len(img_paths))]
+    tiny_valid_subset = img_paths[int(train_split * len(img_paths)):int((train_split + valid_split) * len(img_paths))]
+    test_subset = img_paths[len(img_paths) - int(test_split * len(img_paths)):]
+#     tiny_train_subset, tiny_valid_subset, test_subset = splitDataset(img_paths, num_samples_per_class=70)
     
     # More efficient data fetch pipeline
     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
@@ -145,12 +152,13 @@ def main():
     print("y_true.shape:", y_true.shape)
     
     
-    con_mat = sklearn.metrics.confusion_matrix(y_true, y_preds)
-#     con_mat = tf.math.confusion_matrix(labels=y_true, predictions=y_preds).numpy()
-#     con_mat_norm = np.around(con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis], decimals=2)
-    print(con_mat)
+    con_mat_tf = tf.math.confusion_matrix(labels=y_true, predictions=y_preds).numpy()
+    print("tf math\n", con_mat_tf)
+    con_mat_norm = np.around(con_mat_tf.astype('float') / con_mat_tf.sum(axis=1)[:, np.newaxis], decimals=2)
+    print("tf math normalized\n", con_mat_norm)
     
-    print("Accuracy:", np.sum(np.diag(con_mat)) / np.sum(con_mat))
+    print("Accuracy tf:", np.sum(np.diag(con_mat_tf)) / np.sum(con_mat_tf))
+    print("Accuracy tf normed:", np.sum(np.diag(con_mat_norm)) / np.sum(con_mat_norm))
 
 if __name__ == "__main__":
     main()

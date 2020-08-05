@@ -61,16 +61,22 @@ def classname(str):
     return getCategory(wind_speed)
 
 
-def customGeneratorForClassification(input_file_paths, dims, data_type):
+def getWindSpeed(filename):
+    file_name = filename.split("/")[-1]
+    wind_speed = int(file_name.split(".")[0].split("_")[-1].strip("kts"))
+    return wind_speed
+
+
+def customGeneratorForRegression(input_file_paths, dims, data_type):
     for i, file_path in enumerate(input_file_paths):
-        cid = classname(file_path.decode("utf-8"))
+        wind_speed = getWindSpeed(file_path.decode("utf-8"))
         if data_type.decode("utf-8") in ["png" or "tif"]:
             img = plt.imread((file_path.decode("utf-8")))
         elif data_type.decode("utf-8") == "npy":
             img = np.load(file_path.decode("utf-8"))
         x = resize(img[:,:,:3], dims)
             
-        yield x, tf.keras.utils.to_categorical(cid_num_map[cid], num_classes=len(cid_num_map))
+        yield x, float(wind_speed)
 
 
 def splitDataset(img_paths, num_samples_per_class=70):
@@ -124,7 +130,7 @@ def main():
     
 #     X_train = customGenerator(X_train_paths, dims)
 #     X_test = customGenerator(X_test_paths, dims)
-    train_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForClassification, output_types=(np.float32, np.float32), output_shapes=(dims, len(cid_num_map)), args=[tiny_train_subset, dims, "png"])
+    train_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(np.float32, np.float32), output_shapes=(dims,), args=[tiny_train_subset, dims, "png"])
     output = list(train_dataset.take(1).as_numpy_iterator())
 
     print("@#@#@#@#@#@#@ 1")
@@ -136,9 +142,9 @@ def main():
     print("x:", x.min(), x.max())
     print("y:", y)
 
-    valid_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForClassification, output_types=(np.float32, np.float32), output_shapes=(dims, len(cid_num_map)), args=[tiny_valid_subset, dims, "png"])
+    valid_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(np.float32, np.float32), output_shapes=(dims,), args=[tiny_valid_subset, dims, "png"])
     
-    test_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForClassification, output_types=(tf.float32, tf.float32), args=[test_subset, dims, "png"])
+    test_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(tf.float32, tf.float32), args=[test_subset, dims, "png"])
     
 #     train_dataset = tf.data.Dataset.from_tensor_slices((X_train_reshaped, X_train_reshaped))
 #     test_dataset = tf.data.Dataset.from_tensor_slices((X_test_reshaped, X_test_reshaped))
@@ -178,35 +184,35 @@ def main():
     
     # ARCHITECTURE
     print("---- Reading Model ----")
-    classification_model_parent = Sequential()
-    classification_model = load_model(EMBEDDING_MODEL_PATH)
-    print(classification_model.summary())
+    regression_model_parent = Sequential()
+    regression_model = load_model(EMBEDDING_MODEL_PATH)
+    print(regression_model.summary())
     
-    print("model.inputs:", classification_model.inputs)
-    print("conv2d_8:", classification_model.get_layer('conv2d_8').output)
+    print("model.inputs:", regression_model.inputs)
+    print("conv2d_8:", regression_model.get_layer('conv2d_8').output)
     
     layer_name = 'conv2d_8'
-    classification_model = Model(inputs=classification_model.inputs, 
-                                 outputs=classification_model.get_layer(layer_name).output)
+    regression_model = Model(inputs=regression_model.inputs, 
+                                 outputs=regression_model.get_layer(layer_name).output)
     
-    for layer in classification_model.layers:
+    for layer in regression_model.layers:
         layer.trainable = False
     
-    classification_model_parent.add(classification_model)
-    classification_model_parent.add(Flatten())
-    classification_model_parent.add(Dense(256, activation='relu'))
-    classification_model_parent.add(Dropout(0.1))
-    classification_model_parent.add(Dense(64, activation='relu'))
-    classification_model_parent.add(Dropout(0.1))
-    classification_model_parent.add(Dense(len(cid_num_map), activation="softmax"))
-    print(classification_model_parent.summary())
+    regression_model_parent.add(regression_model)
+    regression_model_parent.add(Flatten())
+    regression_model_parent.add(Dense(256, activation='relu'))
+    regression_model_parent.add(Dropout(0.1))
+    regression_model_parent.add(Dense(64, activation='relu'))
+    regression_model_parent.add(Dropout(0.1))
+    regression_model_parent.add(Dense(1))
+    print(regression_model_parent.summary())
     
-    classification_model_parent.compile(optimizer=tf.keras.optimizers.Adam(1e-3),
-                                        loss="categorical_crossentropy",
+    regression_model_parent.compile(optimizer=tf.keras.optimizers.Adam(1e-3),
+                                        loss="mse",
                                         metrics=["accuracy"],)
     
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOG_DIR)
-    classification_model_parent.fit(train_dataset,
+    regression_model_parent.fit(train_dataset,
                                     epochs=NUM_EPOCHS,
                                     steps_per_epoch=len(tiny_train_subset) // BATCH_SIZE,
 #                                     validation_split=0.2,
@@ -215,7 +221,7 @@ def main():
                                     callbacks=[tensorboard_callback, WandbCallback()],
                                     use_multiprocessing=True)
     
-    classification_model_parent.save(OUTPUT_MODEL_PATH)
+    regression_model_parent.save(OUTPUT_MODEL_PATH)
     
     
 if __name__ == "__main__":

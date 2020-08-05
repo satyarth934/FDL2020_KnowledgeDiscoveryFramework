@@ -21,10 +21,10 @@ Parameters:
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/mean_stdev_removed/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed_gap_filled/*"
-DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes_reorganized"
+DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
 
 NORMALIZE = True
-MODEL_NAME = "baseAE_hurricane"
+MODEL_NAME = "baseAE_hurricane_try3_ssim"
 OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + MODEL_NAME
 TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/" + MODEL_NAME
 ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME
@@ -35,93 +35,57 @@ BATCH_SIZE = 64
 INTERPOLATE_DATA_GAP = False
 
 
-# # Check to see if GPU is being used
-print(tensorflow.test.gpu_device_name())
-print("Num GPUs Available: ", tf.config.experimental.list_physical_devices('GPU'))
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+# Learning rate scheduler
+def lr_scheduler_1(epoch, lr):
+    decay_rate = 0.8
+    decay_step = 1
+    if epoch % decay_step == 0 and epoch:
+        return lr * pow(decay_rate, np.floor(epoch / decay_step))
+    return lr
+
+def lr_scheduler(epoch, lr):
+    decay_rate = 0.8
+    decay_step = 5
+    if epoch % decay_step == 0 and epoch:
+        return lr * decay_rate
+    return lr
 
 
-# # Custom data generator to read from the image paths sequence
-# class CustomDataGenerator(data_utils.Sequence):
-#     'Generates data for Keras'
-#     def __init__(self, list_IDs, batch_size=32, dim=(448,448,3), shuffle=True):
-#         'Initialization'
-#         self.dim = dim
-#         self.batch_size = batch_size
-#         self.list_IDs = list_IDs
-#         self.shuffle = shuffle
-#         self.on_epoch_end()
-
-#     def __len__(self):
-#         'Denotes the number of batches per epoch'
-#         return int(np.floor(len(self.list_IDs) / self.batch_size))
-
-#     def __getitem__(self, index):
-#         'Generate one batch of data'
-#         # Generate indexes of the batch
-#         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
-
-#         # Find list of IDs
-#         list_IDs_temp = [self.list_IDs[k] for k in indexes]
-
-#         # Generate data
-#         X,y= self.__data_generation(list_IDs_temp)
-#         #print(X.shape,y.shape)
-#         return X, y
-
-#     def on_epoch_end(self):
-#         'Updates indexes after each epoch'
-#         self.indexes = np.arange(len(self.list_IDs))
-#         if self.shuffle == True:
-#             np.random.shuffle(self.indexes)
-
-#     def __data_generation(self, list_IDs_temp):
-#         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
-#         # Initialization
-#         X = np.empty((self.batch_size, *self.dim))
-#         for i,f in enumerate(list_IDs_temp):
-#             X[i,] = resize(plt.imread(f)[:,:,:3], self.dim)
-#             while (np.sum(np.isnan(X[i])) > 0):
-#                 X[i,] = resize(plt.imread(list_IDs_temp[np.random.randint(len(list_IDs_temp))])[:,:,:3], self.dim)
-
-# #         X_batch=X
-# #         Y_batch=X
-#         return X, x
+# Loss functtion
+def ssim_loss(y_true, y_pred):
+    loss=tf.reduce_mean(tf.image.ssim(y_true,y_pred,1.0,filter_size=3))
+    return 1-loss
 
 
+def customGenerator(input_file_paths, dims, data_type):
+    for i, file_path in enumerate(input_file_paths):
+        if data_type.decode("utf-8") in ["png" or "tif"]:
+            img = plt.imread((file_path.decode("utf-8")))
+        elif data_type.decode("utf-8") == "npy":
+            img = np.load(file_path.decode("utf-8"))
+        x = resize(img[:,:,:3], dims)
+            
+        yield x, x
+
+        
 def main():
-#     # Dataloader creation and test
-#     img_paths = glob.glob(DATA_PATH)
-#     print("len(img_paths):", len(img_paths))
-#     random.shuffle(img_paths)
-
-    train_test_split = 0.8
-#     X_train_paths = img_paths[:int(train_test_split * len(img_paths))]
-#     X_test_paths = img_paths[int(train_test_split * len(img_paths)):]
-
-    X_train_path = DATA_PATH + "/train"
-    X_test_path = DATA_PATH + "/test"
     dims = (448, 448, 3)
-
-    # Loading Data
-#     X_train = CustomDataGenerator(X_train_paths, batch_size=32, dim=dims)
-#     X_test = CustomDataGenerator(X_train_paths, batch_size=32, dim=dims)
-
-    train_generator = ImageDataGenerator(horizontal_flip=True,
-                                       vertical_flip=True,
-                                       validation_split=(1 - train_test_split))
     
-    X_train = train_generator.flow_from_directory(X_train_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324, subset='training')
-    X_valid = train_generator.flow_from_directory(X_train_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324, subset='validation')
-    X_test = ImageDataGenerator().flow_from_directory(X_test_path, target_size=(448,448), class_mode="input", batch_size=32, seed=324) 
-
-    sample_train = next(X_train)
-    print("sample train:", sample_train[0].shape, sample_train[1].shape)
-    for i, img in enumerate(sample_train[0][0][:10]):
-        print(np.sum(np.isnan(img)), img.min(), img.max())
-    sample_test = next(X_test)
-    print("sample test:", sample_test[0].shape, sample_test[1].shape)
-
+    # Dataloader creation and test
+    img_paths = glob.glob(DATA_PATH)
+    print("len(img_paths):", len(img_paths))
+    
+    print("Discarding the unusable images")
+    img_paths = utils.getUsableImagePaths(img_paths, "png")
+    print("len(img_paths):", len(img_paths))
+    
+    train_split = 1.0
+    valid_split = 0.0
+    test_split = 0.0
+    X_train_paths = img_paths[:int(train_split * len(img_paths))]
+    X_valid_paths = img_paths[int(train_split * len(img_paths)):int((train_split + valid_split) * len(img_paths))]
+    X_test_paths = img_paths[len(img_paths) - int(test_split * len(img_paths)):]
+    
 #     # RESHAPE IMAGES TO THE DESIRED SIZE
 #     X_train_reshaped = X_train[0]
 #     print(X_train_reshaped[0].shape, X_train_reshaped[1].shape)
@@ -129,38 +93,78 @@ def main():
 #     print(X_test_reshaped[0].shape, X_test_reshaped[1].shape)
 
 #     # More efficient data fetch pipeline
-#     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
+    AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
     
-#     train_dataset = tf.data.Dataset.from_generator(generator=X_train, output_types=(tf.float32, tf.float32))
-#     test_dataset = tf.data.Dataset.from_generator(generator=X_test, output_types=(tf.float32, tf.float32))
+#     X_train = customGenerator(X_train_paths, dims)
+#     X_test = customGenerator(X_test_paths, dims)
+    train_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(np.float32, np.float32), output_shapes=(dims, dims), args=[X_train_paths, dims, "png"])
+    output = list(train_dataset.take(1).as_numpy_iterator())
+
+    print("@#@#@#@#@#@#@ 1")
+    print("train_dataset:", train_dataset)
+    print("len(output):", len(output))
+    print("len(output[0]):", len(output[0]))
+    x,y = output[0]
+    print("Printing the output:", x.shape, y.shape)
+    print("x:", x.min(), x.max())
+    print("y:", y.min(), y.max())
+    print(x.shape, y.shape)
+
+    valid_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(np.float32, np.float32), output_shapes=(dims, dims), args=[X_valid_paths, dims, "png"])
     
-# #     train_dataset = tf.data.Dataset.from_tensor_slices((X_train_reshaped, X_train_reshaped))
-# #     test_dataset = tf.data.Dataset.from_tensor_slices((X_test_reshaped, X_test_reshaped))
+    test_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims, "png"])
+    
+    train_dataset = train_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
+    train_dataset = train_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
+    train_dataset = train_dataset.batch(BATCH_SIZE)
+    train_dataset = train_dataset.repeat()
+    train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
+    
+    valid_dataset = valid_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
+    valid_dataset = valid_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
+    valid_dataset = valid_dataset.batch(BATCH_SIZE)
+    valid_dataset = valid_dataset.repeat()
+    valid_dataset = valid_dataset.prefetch(buffer_size=AUTOTUNE)
 
-#     train_dataset = train_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
-#     train_dataset = train_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
-#     train_dataset = train_dataset.batch(BATCH_SIZE)
-#     train_dataset = train_dataset.repeat()
-#     train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
+    test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
+    test_dataset = test_dataset.cache()
+    test_dataset = test_dataset.prefetch(buffer_size=AUTOTUNE)
 
-#     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
-#     test_dataset = test_dataset.cache()
-#     test_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
+    
+#     print("train_dataset:", train_dataset)
+#     print(train_dataset[0])
+    output = list(train_dataset.take(1).as_numpy_iterator())
 
+    print("@#@#@#@#@#@#@ 2")
+    print("train_dataset:", train_dataset)
+    print("len(output):", len(output))
+    print("len(output[0]):", len(output[0]))
+    x,y = output[0]
+    print("Printing the output:", x.shape, y.shape)
+    print("x:", x.min(), x.max())
+    print("y:", y.min(), y.max())
+    print(x.shape, y.shape)
+    print("---------------------------------")
+    
     
     # ARCHITECTURE
     complete_model = model.createModel(dims)
     print(complete_model.summary())
 
-    complete_model.compile(optimizer='rmsprop', loss='mse')
+    opt = tf.keras.optimizers.Adam(learning_rate=0.1)
+    complete_model.compile(optimizer=opt, loss=ssim_loss, metrics=[ssim_loss])
 
-    image = np.expand_dims(X_test[0][0][0], 0)
-    # image = X_test_reshaped[0:10]
-    print(image.shape)
+    image = resize(plt.imread(X_train_paths[0])[:,:,:3], dims)
+    print("Activation visualization image shape orig:", image.shape)
+    image = np.expand_dims(image, 0)
+    print("Activation visualization image shape extended:", image.shape)
+    print("image:", image.min(), image.max())
+#     image = X_test_reshaped[0:10]
+#     print(image.shape)
 
     # Define the Activation Visualization callback
     output_dir = TENSORBOARD_LOG_DIR
-    callbacks = [
+    activation_viz_callbacks = [
         ActivationsVisualizationCallback(
             validation_data=(image,),
             layers_name=['conv2d_8'],
@@ -171,18 +175,52 @@ def main():
     # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="./tf_callback")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOG_DIR)
 
-    complete_model.fit(X_train,
-                       epochs=NUM_EPOCHS,
-                       steps_per_epoch=X_train.samples // BATCH_SIZE,
-#                        validation_split=0.2,
-                       validation_data=X_valid,
-                       validation_steps=X_valid.samples / BATCH_SIZE,
-                       callbacks=[callbacks, tensorboard_callback, WandbCallback()],
-                       use_multiprocessing=True
-                       )
+#     # Schedule LR updates
+#     lr_callback = tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=1)
+    
+    # Reduce LR only when the loss graph plateaus
+    lr_plateau_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.1,
+                                                               patience=5, verbose=1, 
+                                                               mode='auto', min_delta=0.005, 
+                                                               cooldown=5, min_lr=0.000005)
+    
+    # save after every 10 epochs
+    ckpt_path = OUTPUT_MODEL_PATH + "/checkpoints/"
+    subprocess.call("mkdir -p %s" % ckpt_path, shell=True)
+    model_ckpt_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=ckpt_path + "epoch{epoch:03d}-loss{loss:.6f}.hdf5",
+        monitor='loss', verbose=1, save_best_only=False,
+        save_weights_only=False, mode='auto',
+        save_freq=(10 * (len(X_train_paths) // BATCH_SIZE)))
 
+#     earlystopping_callback = tf.keras.callbacks.EarlyStopping(
+#         monitor='loss', min_delta=0.0005, patience=5, verbose=1, mode='auto')
+    
+    callback_functions = [activation_viz_callbacks, 
+                          tensorboard_callback, 
+                          lr_plateau_callback, 
+                          model_ckpt_callback,
+#                           earlystopping_callback,
+                          WandbCallback()]
+    
+    model_history = complete_model.fit(train_dataset,
+                                       epochs=NUM_EPOCHS,
+                                       steps_per_epoch=len(X_train_paths) // BATCH_SIZE,
+                                       initial_epoch=0,
+#                                        validation_split=0.2,
+#                                        validation_data=valid_dataset,
+#                                        validation_steps=len(X_valid_paths) // BATCH_SIZE,
+                                       callbacks=callback_functions,
+#                                        use_multiprocessing=True
+                                      )
+        
+#     print("model_history.epoch:", model_history.epoch)
+#     print("model_history:")
+#     pprint(model_history.history)
+    
     complete_model.save(OUTPUT_MODEL_PATH)
 
+#     sys.exit(0)
 
 
     # ## Model Testing
@@ -191,7 +229,9 @@ def main():
     # index = np.random.randint(0, len(X_test_reshaped))
     # image = input_test[index].reshape((1, 32, 32, 3))
     # image = np.expand_dims(X_test_reshaped[index],0)
-    image = X_test[0][0][:10]
+#     image = X_test[0][0][:10]
+    image = np.array([resize(plt.imread(train_img_path)[:,:,:3], dims) for train_img_path in X_train_paths[:10]])
+#     image = np.array([resize(plt.imread(test_img_path)[:,:,:3], dims) for test_img_path in X_test_paths[:10]])
 #     image = X_test_reshaped[:10]
     label = image
     print('val:', image.shape)

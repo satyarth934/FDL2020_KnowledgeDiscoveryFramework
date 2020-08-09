@@ -4,17 +4,18 @@ random.seed(a=13521)
 
 import utils
 import BaseAE_UC_Merced as aeucm
+import BaseAE_hurricane as aeh
 
 
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/*/array_3bands_normalized/448/*"
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/mean_stdev_removed/*" # <- needs to be normalized
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*" # <- needs to be normalized
 # DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed_gap_filled/*"
-# DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
-DATA_PATH = "/home/satyarth934/data/proxy_data/UCMerced_LandUse/Images/*/*"
+DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes_2019/*/*"
+# DATA_PATH = "/home/satyarth934/data/proxy_data/UCMerced_LandUse/Images/*/*"
 NORMALIZE = True
 
-MODEL_NAME = "baseAE_uc_merced"
+MODEL_NAME = "baseAE_hurricane_try3"
 BASE_DIR = "/home/satyarth934/code/FDL_2020/"
 
 OUTPUT_MODEL_PATH = BASE_DIR + "Models/" + MODEL_NAME
@@ -29,8 +30,10 @@ FEATURES_OUTPUT = FEATURE_DIR + "/features.pkl"
 
 NUM_EPOCHS = 200
 INTERPOLATE_DATA_GAP = False
-IMAGE_TYPE = "tif"
+IMAGE_TYPE = "png"
 
+cust_obj_dict = {"baseAE_hurricane_try3_ssim": ('ssim_loss', aeh.ssim_loss), 
+                 "baseAE_hurricane_try3_ssimms": ('ssim_loss_ms', aeh.ssim_loss_ms)}
 
 # # Function to featurize the input
 # def extract_features(img_array, model, layer_names):
@@ -70,14 +73,17 @@ def featurize():
     dims = (448, 448, 3)
 
     print("---- Reading Model ----")
-    model = load_model(OUTPUT_MODEL_PATH)
+    cust_obj_label = None if MODEL_NAME not in cust_obj_dict else cust_obj_dict[MODEL_NAME][0]
+    cust_obj_fn = None if MODEL_NAME not in cust_obj_dict else cust_obj_dict[MODEL_NAME][1]
+    model = load_model(OUTPUT_MODEL_PATH, custom_objects={cust_obj_label:cust_obj_fn})
+#     model = load_model(OUTPUT_MODEL_PATH)
     print(model.summary())
     
     print("---- Featurizing Data ----")
 #     feature_list = extract_features(img_array=X_test, model=model, layer_names=['conv2d_8'])
 #     print("feature_list shape:", len(feature_list), feature_list[0].shape)
     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
-    test_dataset = tf.data.Dataset.from_generator(generator=aeucm.customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims, IMAGE_TYPE])
+    test_dataset = tf.data.Dataset.from_generator(generator=aeh.customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims, IMAGE_TYPE])
     
     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
     test_dataset = test_dataset.cache().batch(64)

@@ -32,6 +32,7 @@ def fillGaps(DATA_PATH, OUTPUT_PATH):
     N = 2
     radius = 85
 
+    # Iterate ove the images
     for path_idx, image in enumerate(tqdm.tqdm(dataset)):
         image = utils.normalize(image)
         

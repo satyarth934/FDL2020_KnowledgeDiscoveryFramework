@@ -2,15 +2,19 @@
 # coding: utf-8
 
 from import_modules import *
+# import tensorflow_addons as tfa
 import sklearn.metrics
+
 import model
 import utils
+import BaseAE_hurricane as aeh
+
 sys.dont_write_bytecode = True
 random.seed(234)
 
-import wandb
-from wandb.keras import WandbCallback
-wandb.init(config={"hyper": "parameter"})
+# import wandb
+# from wandb.keras import WandbCallback
+# wandb.init(config={"hyper": "parameter"})
 
 """
 Parameters:
@@ -117,13 +121,19 @@ def main():
     test_split = 0.1
     tiny_train_subset = img_paths[:int(train_split * len(img_paths))]
     tiny_valid_subset = img_paths[int(train_split * len(img_paths)):int((train_split + valid_split) * len(img_paths))]
-    test_subset = img_paths[len(img_paths) - int(test_split * len(img_paths)):]
+    test_subset = img_paths[len(img_paths) - int(test_split * len(img_paths)):][:128]
 #     tiny_train_subset, tiny_valid_subset, test_subset = splitDataset(img_paths, num_samples_per_class=70)
+    print("test_subset:", len(test_subset))
+    test_subset = utils.getUsableImagePaths(image_paths=test_subset, data_type="png")
+    print("len(usable test_subset):", len(test_subset))
     
     # More efficient data fetch pipeline
     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
    
-    test_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForClassification, output_types=(tf.float32, tf.float32), args=[test_subset, dims, "png"])
+    test_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForClassification, 
+                                                  output_types=(tf.float32, tf.float32), 
+                                                  output_shapes=(dims, len(cid_num_map)), 
+                                                  args=[test_subset, dims, "png"])
     
     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
     test_dataset = test_dataset.cache().batch(BATCH_SIZE)
@@ -135,9 +145,12 @@ def main():
     classification_model = load_model(OUTPUT_MODEL_PATH)
     print(classification_model.summary())
     
+    print("=====================")
+    print("---- PREDICTIONS ----")
+    print("=====================")
     predictions = classification_model.predict(test_dataset,
                                                max_queue_size=BATCH_SIZE,
-                                               callbacks=[tf.keras.callbacks.ProgbarLogger('steps')])
+                                               callbacks=[])
     print(type(predictions))
     print("predictions.shape:", predictions.shape)
     y_preds = np.argmax(predictions, axis=1, out=None)
@@ -151,14 +164,30 @@ def main():
     print("len(y_true):", len(y_true))
     print("y_true.shape:", y_true.shape)
     
-    
     con_mat_tf = tf.math.confusion_matrix(labels=y_true, predictions=y_preds).numpy()
     print("tf math\n", con_mat_tf)
+    print("Accuracy tf:", np.sum(np.diag(con_mat_tf)) / np.sum(con_mat_tf))
+    
     con_mat_norm = np.around(con_mat_tf.astype('float') / con_mat_tf.sum(axis=1)[:, np.newaxis], decimals=2)
     print("tf math normalized\n", con_mat_norm)
-    
-    print("Accuracy tf:", np.sum(np.diag(con_mat_tf)) / np.sum(con_mat_tf))
     print("Accuracy tf normed:", np.sum(np.diag(con_mat_norm)) / np.sum(con_mat_norm))
+    
+    w_f1score = sklearn.metrics.f1_score(y_true, y_preds, labels=None, average='weighted')
+    print("Weighted F1-score:", w_f1score)
 
+    print("=====================")
+    print("---- EVALUATIONS ----")
+    print("=====================")
+    print("test_dataset:", test_dataset)
+    test_output = list(test_dataset.take(1).as_numpy_iterator())
+    print("len of test_output and test_output[0]:", len(test_output), len(test_output[0]))
+    x,y = test_output[0]
+    print("Printing the output:", x.shape, y.shape)
+    print("x:", x.min(), x.max(), "\ty:", y.min(), y.max())
+    print("---------------------------------")
+    eval_dict = classification_model.evaluate(test_dataset, verbose=1, return_dict=True)
+    
+    print("eval_dict:", eval_dict)
+    
 if __name__ == "__main__":
     main()

@@ -57,6 +57,12 @@ def ssim_loss(y_true, y_pred):
     return 1-loss
 
 
+def ssim_loss_ms(y_true, y_pred):
+    loss=tf.reduce_mean(tf.image.ssim_multiscale(y_true,y_pred,1.0,filter_size=3))
+    return 1-loss
+
+
+# Input data generation
 def customGenerator(input_file_paths, dims, data_type):
     for i, file_path in enumerate(input_file_paths):
         if data_type.decode("utf-8") in ["png" or "tif"]:
@@ -130,9 +136,6 @@ def main():
     test_dataset = test_dataset.cache()
     test_dataset = test_dataset.prefetch(buffer_size=AUTOTUNE)
 
-    
-#     print("train_dataset:", train_dataset)
-#     print(train_dataset[0])
     output = list(train_dataset.take(1).as_numpy_iterator())
 
     print("@#@#@#@#@#@#@ 2")
@@ -151,8 +154,8 @@ def main():
     complete_model = model.createModel(dims)
     print(complete_model.summary())
 
-    opt = tf.keras.optimizers.Adam(learning_rate=0.1)
-    complete_model.compile(optimizer=opt, loss=ssim_loss, metrics=[ssim_loss])
+    opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+    complete_model.compile(optimizer=opt, loss=ssim_loss)
 
     image = resize(plt.imread(X_train_paths[0])[:,:,:3], dims)
     print("Activation visualization image shape orig:", image.shape)
@@ -179,10 +182,10 @@ def main():
 #     lr_callback = tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=1)
     
     # Reduce LR only when the loss graph plateaus
-    lr_plateau_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.1,
+    lr_plateau_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.2,
                                                                patience=5, verbose=1, 
-                                                               mode='auto', min_delta=0.005, 
-                                                               cooldown=5, min_lr=0.000005)
+                                                               mode='auto', min_delta=0.0001, 
+                                                               cooldown=5, min_lr=0.00000005)
     
     # save after every 10 epochs
     ckpt_path = OUTPUT_MODEL_PATH + "/checkpoints/"
@@ -246,24 +249,25 @@ def main():
         explainer.save(grid, ACTIVATION_IMG_PATH, '%s.png' % (layer))
 
 
-#     # complete_model = model.load_model(OUTPUT_MODEL_PATH)
-#     for i in range(10):
-#         index = np.random.randint(0, len(X_test_reshaped))
+    # complete_model = model.load_model(OUTPUT_MODEL_PATH)
+    for i in range(10):
+        index = np.random.randint(0, len(X_train_paths))
 
-#         X_test_im = np.expand_dims(X_test_reshaped[index], 0)
-#         out_image = np.squeeze(complete_model.predict(X_test_im))
+        image_train = resize(plt.imread(X_train_paths[index])[:,:,:3], dims)
+        X_image_train = np.expand_dims(image_train, 0)
+        out_image = np.squeeze(complete_model.predict(X_image_train))
 
-#         im_min = out_image.min(axis=(0, 1), keepdims=True)
-#         im_max = out_image.max(axis=(0, 1), keepdims=True)
-#         out_image = (out_image - im_min) / (im_max - im_min)
+        im_min = out_image.min(axis=(0, 1), keepdims=True)
+        im_max = out_image.max(axis=(0, 1), keepdims=True)
+        out_image = (out_image - im_min) / (im_max - im_min)
 
-#         print("Orig ", np.min(X_test_im), np.max(X_test_im))
-#         print("Gen ", np.min(out_image), np.max(out_image))
+        print("Orig ", np.min(X_image_train), np.max(X_image_train))
+        print("Gen ", np.min(out_image), np.max(out_image))
 #         fig = plt.figure()
 #         plt.subplot(1, 3, 1)
-#         plt.imshow(X_test_reshaped[index])
+#         plt.imshow(image_train)
 #         plt.subplot(1, 3, 2)
-#         plt.imshow(np.squeeze(X_test_im))
+#         plt.imshow(np.squeeze(X_image_train))
 #         plt.subplot(1, 3, 3)
 #         plt.imshow(out_image)
 #         plt.show()

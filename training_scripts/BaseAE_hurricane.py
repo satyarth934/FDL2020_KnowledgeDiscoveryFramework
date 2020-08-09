@@ -8,7 +8,9 @@ sys.dont_write_bytecode = True
 
 import wandb
 from wandb.keras import WandbCallback
-wandb.init(config={"hyper": "parameter"})
+wandb.init(config={"hyper": "parameter"}, 
+           name="baseAE_hurricane_ssim_featurizer_training", 
+           notes="ssim training on hurricane, added early stopping and LR update if loss plateaus. Saves intermediate checkpoints.")
 
 """
 Parameters:
@@ -92,17 +94,8 @@ def main():
     X_valid_paths = img_paths[int(train_split * len(img_paths)):int((train_split + valid_split) * len(img_paths))]
     X_test_paths = img_paths[len(img_paths) - int(test_split * len(img_paths)):]
     
-#     # RESHAPE IMAGES TO THE DESIRED SIZE
-#     X_train_reshaped = X_train[0]
-#     print(X_train_reshaped[0].shape, X_train_reshaped[1].shape)
-#     X_test_reshaped = X_test[0]
-#     print(X_test_reshaped[0].shape, X_test_reshaped[1].shape)
-
-#     # More efficient data fetch pipeline
+    # More efficient data fetch pipeline
     AUTOTUNE = tensorflow.data.experimental.AUTOTUNE
-    
-#     X_train = customGenerator(X_train_paths, dims)
-#     X_test = customGenerator(X_test_paths, dims)
     train_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(np.float32, np.float32), output_shapes=(dims, dims), args=[X_train_paths, dims, "png"])
     output = list(train_dataset.take(1).as_numpy_iterator())
 
@@ -133,7 +126,7 @@ def main():
     valid_dataset = valid_dataset.prefetch(buffer_size=AUTOTUNE)
 
     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
-    test_dataset = test_dataset.cache()
+    test_dataset = test_dataset.cache().batch(BATCH_SIZE)
     test_dataset = test_dataset.prefetch(buffer_size=AUTOTUNE)
 
     output = list(train_dataset.take(1).as_numpy_iterator())
@@ -196,14 +189,14 @@ def main():
         save_weights_only=False, mode='auto',
         save_freq=(10 * (len(X_train_paths) // BATCH_SIZE)))
 
-#     earlystopping_callback = tf.keras.callbacks.EarlyStopping(
-#         monitor='loss', min_delta=0.0005, patience=5, verbose=1, mode='auto')
+    earlystopping_callback = tf.keras.callbacks.EarlyStopping(
+        monitor='loss', min_delta=0.000001, patience=5, verbose=1, mode='auto')
     
     callback_functions = [activation_viz_callbacks, 
                           tensorboard_callback, 
                           lr_plateau_callback, 
                           model_ckpt_callback,
-#                           earlystopping_callback,
+                          earlystopping_callback,
                           WandbCallback()]
     
     model_history = complete_model.fit(train_dataset,

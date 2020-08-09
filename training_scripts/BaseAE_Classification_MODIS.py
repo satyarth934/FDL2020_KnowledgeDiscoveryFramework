@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+
 from import_modules import *
-import tensorflow_addons as tfa
+# import tensorflow_addons as tfa
+
+import wandb
+from wandb.keras import WandbCallback
+wandb.init(config={"hyper": "parameter"}, 
+           name="baseAE_dust_rms_classifier_training", 
+           notes="classification training on MODIS dust data. The labels have been reduced to just Dust/No_Dust. Saves intermediate checkpoints.")
 
 import sklearn
 import model
@@ -11,9 +18,6 @@ import BaseAE_hurricane as aeh
 sys.dont_write_bytecode = True
 random.seed(234)
 
-import wandb
-from wandb.keras import WandbCallback
-wandb.init(config={"hyper": "parameter"})
 
 ############
 # PARAMETERS
@@ -29,7 +33,7 @@ TENSORBOARD_LOG_DIR = "/home/satyarth934/code/FDL_2020/tb_logs/" + MODEL_NAME
 ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME
 PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME + "/train_test_paths.npy"
 
-NUM_EPOCHS = 2
+NUM_EPOCHS = 200
 BATCH_SIZE = 32
 INTERPOLATE_DATA_GAP = False
 CUSTOM_OBJECTS = False
@@ -101,7 +105,7 @@ def main():
     dims = (448, 448, 3)
     
     # Dataloader creation and test
-    img_paths = glob.glob(DATA_PATH)[:1024]
+    img_paths = glob.glob(DATA_PATH)
     print("len(img_paths):", len(img_paths))
     img_paths = utils.getUsableImagePaths(image_paths=img_paths, data_type="npy")
     print("len(usable img_paths):", len(img_paths))
@@ -234,6 +238,15 @@ def main():
 #                                  metrics=["categorical_accuracy"])
                                  metrics=METRICS)
     
+    # save model after every 10 epochs
+    ckpt_path = OUTPUT_MODEL_PATH + "/checkpoints/"
+    subprocess.call("mkdir -p %s" % ckpt_path, shell=True)
+    model_ckpt_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=ckpt_path + "epoch{epoch:03d}-loss{loss:.6f}.hdf5",
+        monitor='loss', verbose=1, save_best_only=False,
+        save_weights_only=False, mode='auto',
+        save_freq=(10 * (len(tiny_train_subset) // BATCH_SIZE)))
+    
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOG_DIR)
     classification_model.fit(train_dataset,
                              epochs=NUM_EPOCHS,
@@ -241,7 +254,7 @@ def main():
 #                              validation_split=0.2,
                              validation_data=valid_dataset,
                              validation_steps=len(tiny_valid_subset) // BATCH_SIZE,
-                             callbacks=[tensorboard_callback, WandbCallback()],
+                             callbacks=[tensorboard_callback, model_ckpt_callback, WandbCallback()],
                              use_multiprocessing=True)
     
     print("Saving the trained model...")

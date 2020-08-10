@@ -87,7 +87,7 @@ def main():
 #     img_paths = utils.getUsableImagePaths(img_paths, "png")
 #     print("len(img_paths):", len(img_paths))
     f = open("hurricane_input.txt", 'r')
-    img_paths = [fi.strip("\n") for fi in f.readlines()][:1024]
+    img_paths = [fi.strip("\n") for fi in f.readlines()]
     print("len(img_paths):", len(img_paths))
     
     train_split = 1.0

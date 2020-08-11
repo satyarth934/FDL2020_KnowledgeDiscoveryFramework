@@ -183,16 +183,56 @@ def main():
                                         metrics=["mae", "mse"],)
     
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOG_DIR)
+    
+    # Reduce LR only when the loss graph plateaus
+    lr_plateau_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.2,
+                                                               patience=5, verbose=1, 
+                                                               mode='auto', min_delta=0.0001, 
+                                                               cooldown=5, min_lr=0.00000005)
+    
+    # save after every 10 epochs
+    ckpt_path = OUTPUT_MODEL_PATH + "/checkpoints/"
+    subprocess.call("mkdir -p %s" % ckpt_path, shell=True)
+    model_ckpt_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=ckpt_path + "epoch{epoch:03d}-loss{loss:.6f}.hdf5",
+        monitor='loss', verbose=1, save_best_only=False,
+        save_weights_only=False, mode='auto',
+        save_freq=(10 * (len(X_train_paths) // BATCH_SIZE)))
+
+    earlystopping_callback = tf.keras.callbacks.EarlyStopping(
+        monitor='loss', min_delta=0.000001, patience=5, verbose=1, mode='auto')
+    
+    callback_functions = [tensorboard_callback, 
+                          lr_plateau_callback, 
+                          model_ckpt_callback,
+                          earlystopping_callback,
+                          WandbCallback()]
+    
     regression_model_parent.fit(train_dataset,
                                     epochs=NUM_EPOCHS,
                                     steps_per_epoch=len(tiny_train_subset) // BATCH_SIZE,
 #                                     validation_split=0.2,
                                     validation_data=valid_dataset,
                                     validation_steps=len(tiny_valid_subset) // BATCH_SIZE,
-                                    callbacks=[tensorboard_callback, WandbCallback()],
+                                    callbacks=callback_functions,
                                     use_multiprocessing=True)
     
     regression_model_parent.save(OUTPUT_MODEL_PATH)
+    
+    
+    print("=====================")
+    print("---- EVALUATIONS ----")
+    print("=====================")
+    print("test_dataset:", test_dataset)
+    test_output = list(test_dataset.take(1).as_numpy_iterator())
+    print("len of test_output and test_output[0]:", len(test_output), len(test_output[0]))
+    x,y = test_output[0]
+    print("Printing the output:", x.shape, y.shape)
+    print("x:", x.min(), x.max(), "\ty:", y.min(), y.max())
+    print("---------------------------------")
+    eval_dict = regression_model_parent.evaluate(test_dataset, verbose=1, return_dict=True)
+    
+    print("eval_dict:", eval_dict)
     
     
 if __name__ == "__main__":

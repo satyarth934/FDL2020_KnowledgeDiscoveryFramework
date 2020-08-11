@@ -33,7 +33,7 @@ ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_
 PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME + "/train_test_paths.npy"
 
 NUM_EPOCHS = 200
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 INTERPOLATE_DATA_GAP = False
 
 
@@ -79,7 +79,7 @@ def customGenerator(input_file_paths, dims, data_type):
 def main():
     dims = (448, 448, 3)
     
-    # Dataloader creation and test
+#     # Dataloader creation and test
 #     img_paths = glob.glob(DATA_PATH)
 #     print("len(img_paths):", len(img_paths))
     

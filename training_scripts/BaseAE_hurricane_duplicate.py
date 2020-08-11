@@ -33,7 +33,7 @@ ACTIVATION_IMG_PATH = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_
 PATH_LIST_LOCATION = "/home/satyarth934/code/FDL_2020/activation_viz/" + MODEL_NAME + "/train_test_paths.npy"
 
 NUM_EPOCHS = 200
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 INTERPOLATE_DATA_GAP = False
 
 
@@ -79,12 +79,15 @@ def customGenerator(input_file_paths, dims, data_type):
 def main():
     dims = (448, 448, 3)
     
-    # Dataloader creation and test
-    img_paths = glob.glob(DATA_PATH)
-    print("len(img_paths):", len(img_paths))
+#     # Dataloader creation and test
+#     img_paths = glob.glob(DATA_PATH)
+#     print("len(img_paths):", len(img_paths))
     
-    print("Discarding the unusable images")
-    img_paths = utils.getUsableImagePaths(img_paths, "png")
+#     print("Discarding the unusable images")
+#     img_paths = utils.getUsableImagePaths(img_paths, "png")
+#     print("len(img_paths):", len(img_paths))
+    f = open("hurricane_input.txt", 'r')
+    img_paths = [fi.strip("\n") for fi in f.readlines()]
     print("len(img_paths):", len(img_paths))
     
     train_split = 1.0
@@ -113,20 +116,21 @@ def main():
     
     test_dataset = tf.data.Dataset.from_generator(generator=customGenerator, output_types=(tf.float32, tf.float32), args=[X_test_paths, dims, "png"])
     
+    train_dataset = train_dataset.batch(BATCH_SIZE)
     train_dataset = train_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
     train_dataset = train_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
-    train_dataset = train_dataset.batch(BATCH_SIZE)
     train_dataset = train_dataset.repeat()
     train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
     
+    valid_dataset = valid_dataset.batch(BATCH_SIZE)
     valid_dataset = valid_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
     valid_dataset = valid_dataset.cache().shuffle(buffer_size=3*BATCH_SIZE)
-    valid_dataset = valid_dataset.batch(BATCH_SIZE)
     valid_dataset = valid_dataset.repeat()
     valid_dataset = valid_dataset.prefetch(buffer_size=AUTOTUNE)
 
+    test_dataset = test_dataset.batch(BATCH_SIZE)
     test_dataset = test_dataset.map(utils.convert, num_parallel_calls=AUTOTUNE)
-    test_dataset = test_dataset.cache().batch(BATCH_SIZE)
+    test_dataset = test_dataset.cache()
     test_dataset = test_dataset.prefetch(buffer_size=AUTOTUNE)
 
     output = list(train_dataset.take(1).as_numpy_iterator())

@@ -92,6 +92,37 @@ def getUsableImagePaths(image_paths, data_type):
     return usable_paths
 
 
+# prepare a dataset with the specified number of samples per class
+def splitDataset(img_paths, num_samples_per_class=70):
+    tiny_train_subset = []
+    class_count = {}
+
+    for imgpath in tqdm(img_paths):
+        cid = classname(imgpath)
+        if cid not in class_count:
+            class_count[cid] = 1
+            tiny_train_subset.append(imgpath)
+        elif class_count[cid] >= num_samples_per_class:
+            continue
+        else:
+            class_count[cid] += 1
+            tiny_train_subset.append(imgpath)
+
+    pprint(class_count)
+
+    test_subset = list(set(img_paths) - set(tiny_train_subset))
+
+    tiny_valid_subset = random.sample(tiny_train_subset, 
+                                      int(0.2 * len(tiny_train_subset)))
+    tiny_train_subset = list(set(tiny_train_subset) - set(tiny_valid_subset))
+
+    print("len(tiny_train_subset):", len(tiny_train_subset))
+    print("len(tiny_valid_subset):", len(tiny_valid_subset))
+    print("len(test_subset):", len(test_subset))
+    
+    return (tiny_train_subset, tiny_valid_subset, test_subset)
+
+
 # if __name__=="__main__":
 #     DATA_PATH = "/home/satyarth934/data/modis_data_products/terra/array_3bands_adapted/448/median_removed/*"
     

@@ -22,7 +22,7 @@ Parameters:
 DATA_PATH = "/home/satyarth934/data/nasa_impact/hurricanes/*/*"
 
 NORMALIZE = True
-MODEL_NAME = "baseAE_hurricane_try3_classification_80_10_10"
+MODEL_NAME = "baseAE_hurricane_try3_regression"
 OUTPUT_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + MODEL_NAME
 EMBEDDING_MODEL_NAME = "baseAE_hurricane_try3"
 EMBEDDING_MODEL_PATH = "/home/satyarth934/code/FDL_2020/Models/" + EMBEDDING_MODEL_NAME
@@ -76,37 +76,8 @@ def customGeneratorForRegression(input_file_paths, dims, data_type):
             img = np.load(file_path.decode("utf-8"))
         x = resize(img[:,:,:3], dims)
             
-        yield x, float(wind_speed)
-
-
-def splitDataset(img_paths, num_samples_per_class=70):
-    tiny_train_subset = []
-    class_count = {}
-
-    for imgpath in tqdm(img_paths):
-        cid = classname(imgpath)
-        if cid not in class_count:
-            class_count[cid] = 1
-            tiny_train_subset.append(imgpath)
-        elif class_count[cid] >= num_samples_per_class:
-            continue
-        else:
-            class_count[cid] += 1
-            tiny_train_subset.append(imgpath)
-
-    pprint(class_count)
-
-    test_subset = list(set(img_paths) - set(tiny_train_subset))
-
-    tiny_valid_subset = random.sample(tiny_train_subset, 
-                                      int(0.2 * len(tiny_train_subset)))
-    tiny_train_subset = list(set(tiny_train_subset) - set(tiny_valid_subset))
-
-    print("len(tiny_train_subset):", len(tiny_train_subset))
-    print("len(tiny_valid_subset):", len(tiny_valid_subset))
-    print("len(test_subset):", len(test_subset))
-    
-    return (tiny_train_subset, tiny_valid_subset, test_subset)
+        yield x, [float(wind_speed)]
+#         yield x, [tf.cast(wind_speed, tf.float32)]
         
         
 def main():
@@ -130,7 +101,7 @@ def main():
     
 #     X_train = customGenerator(X_train_paths, dims)
 #     X_test = customGenerator(X_test_paths, dims)
-    train_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(np.float32, np.float32), output_shapes=(dims,), args=[tiny_train_subset, dims, "png"])
+    train_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(np.float32, np.float32), output_shapes=(dims,1), args=[tiny_train_subset, dims, "png"])
     output = list(train_dataset.take(1).as_numpy_iterator())
 
     print("@#@#@#@#@#@#@ 1")
@@ -142,7 +113,7 @@ def main():
     print("x:", x.min(), x.max())
     print("y:", y)
 
-    valid_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(np.float32, np.float32), output_shapes=(dims,), args=[tiny_valid_subset, dims, "png"])
+    valid_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(np.float32, np.float32), output_shapes=(dims,1), args=[tiny_valid_subset, dims, "png"])
     
     test_dataset = tf.data.Dataset.from_generator(generator=customGeneratorForRegression, output_types=(tf.float32, tf.float32), args=[test_subset, dims, "png"])
     
@@ -209,7 +180,7 @@ def main():
     
     regression_model_parent.compile(optimizer=tf.keras.optimizers.Adam(1e-3),
                                         loss="mse",
-                                        metrics=["accuracy"],)
+                                        metrics=["mae", "mse"],)
     
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOG_DIR)
     regression_model_parent.fit(train_dataset,

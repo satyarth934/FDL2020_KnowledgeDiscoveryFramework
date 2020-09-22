@@ -1,0 +1,29 @@
+{
+    "root": "/home/satyarth934/code/FDL_2020",
+    "program": "<python with no main file>",
+    "git": {
+        "remote": "https://github.com/satyarth934/FDL_2020.git",
+        "commit": "a3cf741bd1d31e7e380affced1d27489ae40f5d3"
+    },
+    "email": "satyarth934@gmail.com",
+    "startedAt": "2020-08-06T05:21:49.076554",
+    "host": "tensorflow-2-vm",
+    "username": "satyarth934",
+    "executable": "/opt/conda/bin/python",
+    "os": "Linux-4.9.0-13-amd64-x86_64-with-debian-9.13",
+    "python": "3.7.6",
+    "gpu": "Tesla T4",
+    "gpu_count": 2,
+    "cpu_count": 32,
+    "cuda": "10.1.243",
+    "args": [
+        "-f",
+        "/home/satyarth934/.local/share/jupyter/runtime/kernel-f831485e-f226-4382-a6e6-4a4caa65c264.json"
+    ],
+    "state": "running",
+    "jobType": null,
+    "mode": "run",
+    "name": "misunderstood-sea-10",
+    "project": "FDL_2020-notebooks",
+    "heartbeatAt": "2020-08-06T05:21:52.369867"
+}

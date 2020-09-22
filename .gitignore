@@ -1,3 +1,13 @@
-__pycache__
-deep-koalarization
+__pycache__/
+deep-koalarization/
+Models/
+notebooks/.ipynb_checkpoints/
+notebooks/Images/
+training_scripts/.ipynb_checkpoints/
+tb_logs/
+Features/
+activation_viz/
+training_scripts/wandb/
+training_scripts/FillGap_GeneralPipeline.txt
+notebooks/reconstructed/
 

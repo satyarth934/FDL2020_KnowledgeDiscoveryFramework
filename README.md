@@ -1,6 +1,11 @@
-# FDL_2020
+# FDL2020 - Knowledge Discovery Framework
 
+## Datasets used
+1. MODIS - Dust Dataset
+2. NASA Impact Hurricane Dataset
+3. UC Merced Satellite Data
 
+### Info about the directory and files.
 Most of the relevant codes are stored in the 
 `notebooks` and `training_scripts` directories.
 
